@@ -26,81 +26,6 @@ const {
     jidNormalizedUser
 } = require('baileys');
 
-
-
-// function 
-//song download 
-async function ytmp3(link, format = "mp3") {
-  try {
-    // 1. Access yt.savetube.me to get initial page (optional if you want to parse hidden values)
-    const pageRes = await axios.get("https://v6.www-y2mate.com", {
-      headers: {
-        "User-Agent":
-          "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/127 Safari/537.36",
-      },
-    });
-
-    // Load the HTML if you want to scrape tokens/keys (in case they use CSRF or hidden params)
-    const $ = cheerio.load(pageRes.data);
-
-    // 2. Create a conversion task
-    const createUrl = `https://loader.to/ajax/download.php?button=1&format=${format}&url=${encodeURIComponent(
-      link
-    )}`;
-    const createRes = await axios.get(createUrl, {
-      headers: {
-        "User-Agent":
-          "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/127 Safari/537.36",
-        Referer: "https://v6.www-y2mate.com/",
-      },
-    });
-
-    if (!createRes.data.success || !createRes.data.id) {
-      throw new Error("Failed to create task. Invalid link or format.");
-    }
-
-    const taskId = createRes.data.id;
-
-    // 3. Poll progress until the download link is ready
-    let downloadUrl = null;
-    let title = "";
-    let thumbnail = "";
-
-    while (!downloadUrl) {
-      await new Promise((r) => setTimeout(r, 3000)); // wait 3s between polls
-
-      const statusUrl = `https://loader.to/ajax/progress.php?id=${taskId}`;
-      const statusRes = await axios.get(statusUrl, {
-        headers: {
-          "User-Agent":
-            "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/127 Safari/537.36",
-          Referer: "https://v6.www-y2mate.com/",
-        },
-      });
-
-      if (statusRes.data.download_url) {
-        downloadUrl = statusRes.data.download_url;
-        title = statusRes.data.title || "";
-        thumbnail = statusRes.data.thumbnail || "";
-      } else if (statusRes.data.error) {
-        throw new Error("Conversion failed: " + statusRes.data.error);
-      }
-    }
-
-    // 4. Return structured result
-    return {
-      title,
-      Created_by: 'manaofc',
-      thumbnail,
-      format,
-      downloadUrl: downloadUrl,
-    };
-  } catch (err) {
-    console.error("ytmp3 error:", err.message);
-    return null;
-  }
-}
-
 // gdrive download
 async function GDriveDl(url) {
     let id;
@@ -393,753 +318,99 @@ async function handleMessageRevocation(socket, number) {
     });
 } 
 // Memory optimization: Streamline command handlers with rate limiting
-function setupCommandHandlers(socket, number, userConfig) {
+// ===============================
+// 1️⃣ Command registry
+// ===============================
+const commands = [];
+
+function cmd(info, func) {
+    info.function = func;
+    if (!info.desc) info.desc = '';
+    if (!info.category) info.category = 'misc';
+    if (!info.filename) info.filename = "Not Provided";
+    commands.push(info);
+}
+function serializeMessage(socket, msg) {
+    const from = msg.key.remoteJid;
+    const isGroup = from.endsWith('@g.us');
+    const sender = isGroup ? msg.key.participant : from;
+    const senderNumber = sender.split('@')[0];
+
+    let body = '';
+    if (msg.message?.conversation) body = msg.message.conversation;
+    else if (msg.message?.extendedTextMessage?.text)
+        body = msg.message.extendedTextMessage.text;
+    else if (msg.message?.imageMessage?.caption)
+        body = msg.message.imageMessage.caption;
+    else if (msg.message?.videoMessage?.caption)
+        body = msg.message.videoMessage.caption;
+
+    const reply = (text) =>
+        socket.sendMessage(from, { text }, { quoted: msg });
+
+    return {
+        msg,
+        from,
+        body,
+        isGroup,
+        senderNumber,
+        reply
+    };
+}
+
+ function setupCommandHandlers(socket, number, userConfig) {
     const commandCooldowns = new Map();
-    const COMMAND_COOLDOWN = 1000; // 1 second per user
-    
+    const COMMAND_COOLDOWN = 1000;
+
     socket.ev.on('messages.upsert', async ({ messages }) => {
         const msg = messages[0];
-        const newsletterJids = ["120@newsletter"];
-  const emojis = ["🫡", "💪"];
+        if (!msg?.message || msg.key.remoteJid === 'status@broadcast') return;
 
-  if (msg.key && newsletterJids.includes(msg.key.remoteJid)) {
-    try {
-      const serverId = msg.newsletterServerId;
-      if (serverId) {
-      const emoji = emojis[Math.floor(Math.random() * emojis.length)];
-        await conn.newsletterReactMessage(msg.key.remoteJid, serverId.toString(), emoji);
-      }
-    } catch (e) {
-    
-    }
-  }	  
-        if (!msg.message || msg.key.remoteJid === 'status@broadcast') return;
+        const data = serializeMessage(socket, msg);
+        const { body, from, senderNumber } = data;
 
-        // Extract text from different message types
-        let text = '';
-        if (msg.message.conversation) {
-            text = msg.message.conversation.trim();
-        } else if (msg.message.extendedTextMessage?.text) {
-            text = msg.message.extendedTextMessage.text.trim();
-        } else if (msg.message.buttonsResponseMessage?.selectedButtonId) {
-            text = msg.message.buttonsResponseMessage.selectedButtonId.trim();
-        } else if (msg.message.imageMessage?.caption) {
-            text = msg.message.imageMessage.caption.trim();
-        } else if (msg.message.videoMessage?.caption) {
-            text = msg.message.videoMessage.caption.trim();
-        }
-
-        // Check if it's a command
         const prefix = userConfig.PREFIX || '.';
-        if (!text.startsWith(prefix)) return;
-        
-        // Rate limiting
-        const sender = msg.key.remoteJid;
+        if (!body.startsWith(prefix)) return;
+
         const now = Date.now();
-        if (commandCooldowns.has(sender) && now - commandCooldowns.get(sender) < COMMAND_COOLDOWN) {
-            return;
-        }
-        commandCooldowns.set(sender, now);
+        if (
+            commandCooldowns.has(senderNumber) &&
+            now - commandCooldowns.get(senderNumber) < COMMAND_COOLDOWN
+        ) return;
 
-        const parts = text.slice(prefix.length).trim().split(/\s+/);
-        const command = parts[0].toLowerCase();
-        const args = parts.slice(1);
+        commandCooldowns.set(senderNumber, now);
 
-        try {
-            switch (command) {
-// main alive
-                case 'alive': {
-                    const startTime = socketCreationTime.get(number) || Date.now();
-                    const uptime = Math.floor((Date.now() - startTime) / 1000);
-                    const hours = Math.floor(uptime / 3600);
-                    const minutes = Math.floor((uptime % 3600) / 60);
-                    const seconds = Math.floor(uptime % 60);
+        const args = body.slice(prefix.length).trim().split(/\s+/);
+        const commandName = args.shift().toLowerCase();
 
-                    const caption = `
-╭───『 🤖 𝐁𝐎𝐓 𝐀𝐂𝐓𝐈𝐕𝐄 』───╮
-│ ⏰ *ᴜᴘᴛɪᴍᴇ:* ${hours}h ${minutes}m ${seconds}s
-│ 🟢 *ᴀᴄᴛɪᴠᴇ sᴇssɪᴏɴs:* ${activeSockets.size}
-│ 📱 *ʏᴏᴜʀ ɴᴜᴍʙᴇʀ:* ${number}
-╰──────────────────╯
-
-> © *ᴛʜɪꜱ ʙᴏᴛ ᴩᴏᴡᴇʀᴇᴅ ʙy ᴍᴀɴᴀᴏꜰᴄ*
-`;
-
-                    await socket.sendMessage(sender, {
-                        image: { url: defaultConfig.IMAGE_PATH },
-                        caption: caption.trim()
-                    });
-                    break;           
-                }
-                    
-// xvideo download 
-                    
-                case 'xv': {
-    try {
-        const q = args.join(" "); // ⚡ Make sure q is defined
-        if (!q) {
-            return socket.sendMessage(sender, {
-                text: "❌ *Please provide a video link or search keyword!*"
-            });
-        }
-
-        let info;
-
-        // 🔍 Link or Search
-        if (q.startsWith("http")) {
-            info = await xv.xInfo(q);
-        } else {
-            const results = await xv.xsearch(q);
-            if (!results || results.length === 0) {
-                return socket.sendMessage(sender, {
-                    text: "❌ No results found for your keyword."
-                });
-            }
-            info = await xv.xInfo(results[0].url);
-        }
-
-        if (!info?.dlink) {
-            return socket.sendMessage(sender, {
-                text: "❌ Failed to fetch downloadable link for this video."
-            });
-        }
-
-        const caption = `
-╭───『 🔞 𝐗𝐕𝐈𝐃𝐄𝐎 𝐃𝐎𝐖𝐍𝐋𝐎𝐀𝐃𝐄𝐑 』───╮
-│ 🎬 *Title:* ${info.title}
-│ ⏱️ *Duration:* ${info.duration}
-│ 👀 *Views:* ${info.views}
-╰──────────────────────────╯
-        `.trim();
-
-        // ⬇️ Download & Send Video
-        await socket.sendMessage(sender, {
-            video: { url: info.dlink },
-            caption
-        });
-
-    } catch (err) {
-        console.error("XV ERROR:", err);
-        await socket.sendMessage(sender, {
-            text: `❌ Error: ${err.message || "Failed to fetch/download video"}`
-        });
-    }
-    break;
-}
-                    
-// xnxx download
-                    
-case 'xn': {
-    try {
-        const q = args.join(" "); // ⚡ Make sure q is defined
-        if (!q) {
-            return socket.sendMessage(sender, {
-                text: "❌ Please provide a video link or search keyword."
-            });
-        }
-
-        let info;
-
-        // 🔍 Link or search
-        if (q.startsWith("http")) {
-            info = await xnxx.getVideoInfo(q);
-        } else {
-            const results = await xnxx.searchVideos(q);
-            if (!results || results.length === 0) {
-                return socket.sendMessage(sender, {
-                    text: "❌ No results found for your keyword."
-                });
-            }
-            info = await xnxx.getVideoInfo(results[0].url);
-        }
-
-        const caption = `
-╭───『 🎥 XNXX DOWNLOADER 』───╮
-│ 📌 Title: ${info.title}
-│ ⏱ Duration: ${info.duration}
-│ 👀 Views: ${info.views}
-│ 👍 Likes: ${info.likes}
-│ ⭐ Rating: ${info.rating}
-╰──────────────────────────╯
-        `.trim();
-
-        
-        // 🎬 Send video directly
-        await socket.sendMessage(sender, {
-            video: { url: info.dlink },
-            caption }); 
-        
-
-    } catch (err) {
-        console.error("XNXX ERROR:", err);
-        await socket.sendMessage(sender, {
-            text: `❌ Error while fetching/downloading video.\n${err.message || "Unknown error"}`
-        });
-    }
-    break; 
-}
-// song download 
-        case 'song': {
-    try {
-        const q = args.join(" "); // ⚡ Song name or YouTube URL
-        if (!q) {
-            return socket.sendMessage(sender, {
-                text: "❌ Please provide a song name or YouTube URL."
-            });
-        }
-
-        // 🔍 Search or direct link
-        let data;
-        if (q.startsWith("http")) {
-            const search = await yts(q);
-            if (!search.videos || search.videos.length === 0)
-                return socket.sendMessage(sender, { text: "❌ No results found!" });
-            data = search.videos[0];
-        } else {
-            const search = await yts(q);
-            if (!search.videos || search.videos.length === 0)
-                return socket.sendMessage(sender, { text: "❌ No results found!" });
-            data = search.videos[0];
-        }
-
-        const url = data.url;
-
-        const caption = `
-╭───『 🎧 SONG DOWNLOADER 』───╮
-│ 📌 Title: ${data.title}
-│ ⏱ Duration: ${data.timestamp}
-│ 👀 Views: ${data.views}
-│ 📅 Uploaded: ${data.ago}
-╰──────────────────────────╯
-Downloading audio... 🎵
-        `.trim();
-
-        // ⚡ Send "Downloading" message
-        await socket.sendMessage(sender, { text: "⬇️ Downloading song..." });
-
-        // 🎵 Download MP3 (replace ytmp3 with your download function)
-        const result = await ytmp3(url, "mp3");
-        if (!result?.downloadUrl) {
-            return socket.sendMessage(sender, { text: "❌ Failed to download audio!" });
-        }
-
-        const downloadLink = result.downloadUrl;
-
-        // 🎶 Send Audio File directly
-        await socket.sendMessage(sender, {
-            audio: { url: downloadLink },
-            caption
-        });
-        
-    } catch (err) {
-        console.error("SONG ERROR:", err);
-        await socket.sendMessage(sender, {
-            text: `❌ Error while fetching/downloading song.\n${err.message || "Unknown error"}`
-        });
-    }
-    break;
-}
-                
-//apk download
-                    
-        case 'apk': {
-    try {
-        const q = args.join(" "); // ✅ Make sure q is defined
-        if (!q) {
-            return socket.sendMessage(sender, {
-                text: "❌ *Please provide an app name to search!*"
-            });
-        }
-
-        const apiUrl = `http://ws75.aptoide.com/api/7/apps/search/query=${encodeURIComponent(q)}/limit=1`;
-        const res = await axios.get(apiUrl);
-        const data = res.data;
-
-        if (!data?.datalist?.list || data.datalist.list.length === 0) {
-            return socket.sendMessage(sender, {
-                text: "⚠️ *No results found for the given app name.*"
-            });
-        }
-
-        const app = data.datalist.list[0];
-        const appSize = (app.size / 1048576).toFixed(2); // MB
-        const thumb = app.icon;
-        const apkUrl = app.file?.path_alt;
-
-        if (!apkUrl) {
-            return socket.sendMessage(sender, {
-                text: "❌ *Failed to fetch APK download link.*"
-            });
-        }
-
-        const caption = `
-╭───『 📱 APK DOWNLOADER 』───╮
-│ 📦 *Name:* ${app.name}
-│ 🆔 *Package:* ${app.package}
-│ 💾 *Size:* ${appSize} MB
-│ 👨‍💻 *Developer:* ${app.developer.name}
-│ 🗓️ *Updated:* ${app.updated}
-╰──────────────────────────╯
-        `.trim();
-
-        // 🖼️ App info
-        await socket.sendMessage(sender, {
-            image: { url: thumb },
-            caption
-        });
-
-        // ⬇️ Send APK
-        await socket.sendMessage(sender, {
-            document: { url: apkUrl },
-            fileName: `${app.name}.apk`.replace(/[^\w\s.-]/gi, ''),
-            mimetype: "application/vnd.android.package-archive"
-        });
-
-    } catch (err) {
-        console.error("APK ERROR:", err);
-        await socket.sendMessage(sender, {
-            text: `❌ Error: ${err.message || "Failed to download APK"}`
-        });
-    }
-    break;
-}
-                    
-// gdrivre download 
-                    
-                case 'gdrive':{
-                    try {
-                        const q = args.join(" ");
-        if (!q || !q.startsWith("http")) {
-            return socket.sendMessage(sender, {
-                text: "❗ Please provide a valid Google Drive link."
-            });
-        }
-
-        const file = await GDriveDl(q);
-        if (file.error) {
-            return socket.sendMessage(sender, {
-                text: "❌ Failed: " + (file.message || "Unable to fetch file.")
-            });
-        }
-
-        let sizeMB = 0;
-        if (file.fileSize.includes("MB")) {
-            sizeMB = parseFloat(file.fileSize);
-        } else if (file.fileSize.includes("GB")) {
-            sizeMB = parseFloat(file.fileSize) * 1024;
-        }
-
-        if (sizeMB > 1900) {
-            return socket.sendMessage(sender, {
-                text:
-`📄 ${file.fileName}
-📦 Size: ${file.fileSize}
-
-⚠️ File too large for WhatsApp.
-⬇️ Download manually:
-${file.downloadUrl}`
-            });
-        }
-
-        await socket.sendMessage(sender, {
-            document: { url: file.downloadUrl },
-            fileName: file.fileName,
-            mimetype: "application/octet-stream",
-            caption: `📄 ${file.fileName}\n📦 Size: ${file.fileSize}`
-        });
-
-    } catch (err) {
-        console.error("GDRIVE ERROR:", err);
-        socket.sendMessage(sender, {
-            text: "❌ Error while processing Google Drive link."
-        });
-    }
-    break;
-}
-                    
- // mega download 
-                    
- case 'mega': {
-    try {
-        const q = args.join(" ");
-        if (!q) {
-            return socket.sendMessage(sender, {
-                text: "❗ Please provide a MEGA.nz link."
-            });
-        }
-
-        const file = File.fromURL(q);
-        await file.loadAttributes();
-
-        const maxSize = 4 * 1024 * 1024 * 1024; // 4GB
-        if (file.size > maxSize) {
-            return socket.sendMessage(sender, {
-                text:
-`❌ File too large
-Max: 4GB
-Size: ${(file.size / (1024 ** 3)).toFixed(2)} GB`
-            });
-        }
-
-        await socket.sendMessage(sender, {
-            text: `⬇️ Downloading ${file.name} (${(file.size / (1024 ** 2)).toFixed(2)} MB)...`
-        });
-
-        const buffer = await file.downloadBuffer();
-        const mimeType = mime.lookup(file.name) || "application/octet-stream";
-
-        await socket.sendMessage(sender, {
-            document: buffer,
-            fileName: file.name,
-            mimetype: mimeType
-        });
-
-    } catch (err) {
-        console.error("MEGA ERROR:", err);
-        socket.sendMessage(sender, {
-            text: "❌ Failed to download MEGA file."
-        });
-    }
-    break;
-}
-                    
-//mediafire download 
-                    
-case 'mfire': {
-    try {
-        const q = args.join(" ");
-        if (!q || !q.startsWith("https://")) {
-            return socket.sendMessage(sender, {
-                text: "❗ Please provide a valid MediaFire link."
-            });
-        }
-
-        const res = await fetch(q);
-        const html = await res.text();
-        const $ = cheerio.load(html);
-
-        const fileName = $(".dl-info .filename").text().trim();
-        const downloadUrl = $("#downloadButton").attr("href");
-        const fileType = $(".dl-info .filetype").text().trim();
-        const fileSize = $(".dl-info ul li span").first().text().trim();
-        const fileDate = $(".dl-info ul li span").last().text().trim();
-
-        if (!fileName || !downloadUrl) {
-            return socket.sendMessage(sender, {
-                text: "⚠️ Failed to extract MediaFire info."
-            });
-        }
-
-        const ext = fileName.split(".").pop().toLowerCase();
-        const mimeTypes = {
-            zip: "application/zip",
-            pdf: "application/pdf",
-            mp4: "video/mp4",
-            mkv: "video/x-matroska",
-            mp3: "audio/mpeg",
-            "7z": "application/x-7z-compressed",
-            jpg: "image/jpeg",
-            jpeg: "image/jpeg",
-            png: "image/png",
-            rar: "application/x-rar-compressed"
-        };
-
-        await socket.sendMessage(sender, {
-            document: { url: downloadUrl },
-            fileName,
-            mimetype: mimeTypes[ext] || "application/octet-stream",
-            caption:
-`📄 ${fileName}
-📁 Type: ${fileType}
-📦 Size: ${fileSize}
-📅 Uploaded: ${fileDate}`
-        });
-
-    } catch (err) {
-        console.error("MEDIAFIRE ERROR:", err);
-        socket.sendMessage(sender, {
-            text: "❌ Error while processing MediaFire link."
-        });
-    }
-    break;
-}
- 
- // bot setting
-                 case 'settings': {
-                    if (args[0] === 'set' && args.length >= 3) {
-                        const configKey = args[1].toUpperCase();
-                        const configValue = args.slice(2).join(' ');
-                        
-                        // Handle array values
-                        if (configKey === 'AUTO_LIKE_EMOJI') {
-                            userConfig[configKey] = configValue.split(',');
-                        } else {
-                            userConfig[configKey] = configValue;
+        for (const cmdInfo of commands) {
+            if (cmdInfo.pattern === commandName) {
+                try {
+                    await cmdInfo.function(
+                        socket,
+                        msg,
+                        msg,
+                        {
+                            from,
+                            body,
+                            isCmd: true,
+                            command: commandName,
+                            args,
+                            q: args.join(" "),
+                            isGroup: data.isGroup,
+                            senderNumber,
+                            reply: data.reply
                         }
-                        
-                        await updateUserConfig(number, userConfig);
-                        
-                        await socket.sendMessage(sender, {
-                            text: `✅ settings updated: ${configKey} = ${configValue}\n\n> © *ᴛʜɪꜱ ʙᴏᴛ ᴩᴏᴡᴇʀᴇᴅ ʙy ᴍᴀɴᴀᴏꜰᴄ*`
-                        });
-                    } else if (args[0] === 'view') {
-                        let configText = '*📋 Your Current Config:*\n\n';
-                        for (const [key, value] of Object.entries(userConfig)) {
-                            configText += `• ${key}: ${Array.isArray(value) ? value.join(', ') : value}\n`;
-                        }
-                        configText += '\n> © *ᴛʜɪꜱ ʙᴏᴛ ᴩᴏᴡᴇʀᴇᴅ ʙy ᴍᴀɴᴀᴏꜰᴄ*';
-                        
-                        await socket.sendMessage(sender, { text: configText });
-                    } else {
-                        await socket.sendMessage(sender, {
-                            text: `❌ Invalid settings command. Usage:\n${prefix}settings set [key] [value]\n${prefix}settings view\n\n> © *ᴛʜɪꜱ ʙᴏᴛ ᴩᴏᴡᴇʀᴇᴅ ʙy ᴍᴀɴᴀᴏꜰᴄ*`
-                        });
-                    }
-                    break;
-                }
-// main menu
-                case 'menu': {
-                    const startTime = socketCreationTime.get(number) || Date.now();
-                    const uptime = Math.floor((Date.now() - startTime) / 1000);
-                    const hours = Math.floor(uptime / 3600);
-                    const minutes = Math.floor((uptime % 3600) / 60);
-                    const seconds = Math.floor(uptime % 60);
-
-                    const os = require('os');
-                    const ramUsage = Math.round(process.memoryUsage().rss / 1024 / 1024);
-                    const totalRam = Math.round(os.totalmem() / 1024 / 1024);
-
-                    const menuCaption = `
-👋 *Hi ${number}*
-
-╭───『 *MANISHA-MD-MINI BOT IS ACTIVETE* 』
-│ 👾 *ʙᴏᴛ*: MANISHA-MD
-│ 📞 *ᴏᴡɴᴇʀ*: ᴍᴀɴᴀᴏꜰᴄ
-│ ⏳ *ᴜᴘᴛɪᴍᴇ*: ${hours}h ${minutes}m ${seconds}s
-│ 📂 *ʀᴀᴍ*: ${ramUsage}MB / ${totalRam}MB
-│ ✏️ *ᴘʀᴇғɪx*: ${prefix}
-╰─────────────────────╯
-
-⚡ Commands list
-
-main commands:
-
-- ${prefix}alive
-- ${prefix}menu
-- ${prefix}ping
-- ${prefix}uptime
-- ${prefix}repo
-
-download commands:
-
-- ${prefix}xv
-- ${prefix}xv
-- ${prefix}mfire
-- ${prefix}mega
-- ${prefix}gdrive
-
-settings commands:
-
-- ${prefix}settings
-
-owner commands:
-
-- ${prefix}tagall
-- ${prefix}deleteme / confirm
-- ${prefix}getpp <number> - Get profile picture of any number
-`;
-
-                    await socket.sendMessage(sender, {
-                        image: { url: defaultConfig.IMAGE_PATH },
-                        caption: menuCaption.trim()
-                    });
-                    break;
-                }
-
-// ping
-               case 'ping': {
-                    const start = Date.now();
-                    await socket.sendMessage(sender, { text: '🏓 Pong!' });
-                    const latency = Date.now() - start;
-
-             await socket.sendMessage(sender, {
-                        image: { url: defaultConfig.IMAGE_PATH },
-                        caption:  `⚡ *Latency:* ${latency}ms\n📶 *Connection:* ${latency < 500 ? 'Excellent' : latency < 1000 ? 'Good' : 'Poor'}\n\n> © *ᴛʜɪꜱ ʙᴏᴛ ᴩᴏᴡᴇʀᴇᴅ ʙy ᴍᴀɴᴀᴏꜰᴄ* `
-                    });
-                    break;
-                } 
-// uptime
-                
-                case 'uptime': {
-                    const startTime = socketCreationTime.get(number) || Date.now();
-                    const uptime = Math.floor((Date.now() - startTime) / 1000);
-                    const hours = Math.floor(uptime / 3600);
-                    const minutes = Math.floor((uptime % 3600) / 60);
-                    const seconds = Math.floor(uptime % 60);
-                    await socket.sendMessage(sender, {
-                        image: { url: defaultConfig.IMAGE_PATH },
-                        caption:  `⏰ *Uptime:* ${hours}h ${minutes}m ${seconds}s\n📊 *Active Sessions:* ${activeSockets.size}\n\n> © *ᴛʜɪꜱ ʙᴏᴛ ᴩᴏᴡᴇʀᴇᴅ ʙy ᴍᴀɴᴀᴏꜰᴄ*`
-                    });
-                   
-                    break;
-                }
-// tagall
-
-                case 'tagall': {
-                    if (!msg.key.remoteJid.endsWith('@g.us')) {
-                        await socket.sendMessage(sender, { text: '❌ This command can only be used in groups.' });
-                        return;
-                    }
-                    const groupMetadata = await socket.groupMetadata(sender);
-                    const participants = groupMetadata.participants.map(p => p.id);
-                    const tagMessage = `📢 *Tagging all members:*\n\n${participants.map(p => `@${p.split('@')[0]}`).join(' ')}`;
-                    
-                    await socket.sendMessage(sender, {
-                        text: tagMessage,
-                        mentions: participants
-                    });
-                    break;
-                }
-// repo
-                case 'repo': {
-                    await socket.sendMessage(sender, {
-                        image: { url: defaultConfig.IMAGE_PATH },
-                        caption: `📦 *MANISHA-MD-MINI BOT REPOSITORY*\n\n🔗 *GitHub:* https://github.com/manaofc/manaofc-minibot\n\n🌟 *Features:*\n• Fast & Reliable\n• Easy to Use\n• Multiple Sessions\n\n> © *ᴛʜɪꜱ ʙᴏᴛ ᴩᴏᴡᴇʀᴇᴅ ʙy ᴍᴀɴᴀᴏꜰᴄ*`
-                    });
-                    break;
-                }
-// getpp
-                case 'getpp': {
-                    if (args.length === 0) {
-                        await socket.sendMessage(sender, { 
-                            text: `❌ Please provide a phone number.\nUsage: ${prefix}getpp <number>\nExample: ${prefix}getpp 94759934522\n\n> © *ᴛʜɪꜱ ʙᴏᴛ ᴩᴏᴡᴇʀᴇᴅ ʙy ᴍᴀɴᴀᴏꜰᴄ*` 
-                        });
-                        return;
-                    }
-                    
-                    let targetNumber = args[0].replace(/[^0-9]/g, '');
-                    
-                    // Add country code if not provided
-                    if (!targetNumber.startsWith('92') && targetNumber.length === 10) {
-                        targetNumber = '92' + targetNumber;
-                    }
-                    
-                    // Ensure it has @s.whatsapp.net
-                    const targetJid = targetNumber.includes('@') ? targetNumber : `${targetNumber}@s.whatsapp.net`;
-                    
-                    await socket.sendMessage(sender, { 
-                        text: `🕵️ Stealing profile picture for ${targetNumber}...\n\n> © *ᴛʜɪꜱ ʙᴏᴛ ᴩᴏᴡᴇʀᴇᴅ ʙy ᴍᴀɴᴀᴏꜰᴄ*` 
-                    });
-                    
-                    try {
-                        // Get profile picture URL
-                        const profilePictureUrl = await socket.profilePictureUrl(targetJid, 'image');
-                        
-                        if (profilePictureUrl) {
-                            await socket.sendMessage(sender, {
-                                image: { url: profilePictureUrl },
-                                caption: `✅ Successfully stole profile picture!\n📱 Number: ${targetNumber}\n\n> © *ᴛʜɪꜱ ʙᴏᴛ ᴩᴏᴡᴇʀᴇᴅ ʙy ᴍᴀɴᴀᴏꜰᴄ*`
-                            });
-                        } else {
-                            await socket.sendMessage(sender, { 
-                                text: `❌ No profile picture found for ${targetNumber}\n\n> © *ᴛʜɪꜱ ʙᴏᴛ ᴩᴏᴡᴇʀᴇᴅ ʙy ᴍᴀɴᴀᴏꜰᴄ*` 
-                            });
-                        }
-                        
-                    } catch (error) {
-                        console.error('Profile picture steal error:', error);
-                        
-                        if (error.message.includes('404') || error.message.includes('not found')) {
-                            await socket.sendMessage(sender, { 
-                                text: `❌ No profile picture found for ${targetNumber}\n\n> © *ᴛʜɪꜱ ʙᴏᴛ ᴩᴏᴡᴇʀᴇᴅ ʙy ᴍᴀɴᴀᴏꜰᴄ*` 
-                            });
-                        } else {
-                            await socket.sendMessage(sender, { 
-                                text: `❌ Error stealing profile picture: ${error.message}\n\n> © *ᴛʜɪꜱ ʙᴏᴛ ᴩᴏᴡᴇʀᴇᴅ ʙy ᴍᴀɴᴀᴏꜰᴄ*` 
-                            });
-                        }
-                    }
-                    break;
-                }
-// deletme
-                case 'deleteme': {
-                    const confirmationMessage = `⚠️ *Are you sure you want to delete your session?*\n\nThis action will:\n• Log out your bot\n• Delete all session data\n• Require re-pairing to use again\n\nReply with *${prefix}confirm* to proceed or ignore to cancel.`;
-                    
-                    await socket.sendMessage(sender, {
-                        image: { url: defaultConfig.IMAGE_PATH },
-                        caption: confirmationMessage + '\n\n> © *ᴛʜɪꜱ ʙᴏᴛ ᴩᴏᴡᴇʀᴇᴅ ʙy ᴍᴀɴᴀᴏꜰᴄ*'
-                    });
-                    break;
-                }
-// confirm
-                case 'confirm': {
-                    // Handle session deletion confirmation
-                    const sanitizedNumber = number.replace(/[^0-9]/g, '');
-                    
-                    await socket.sendMessage(sender, {
-                        text: '🗑️ Deleting your session...\n\n> © *ᴛʜɪꜱ ʙᴏᴛ ᴩᴏᴡᴇʀᴇᴅ ʙy ᴍᴀɴᴀᴏꜰᴄ*'
-                    });
-                    
-                    try {
-                        // Close the socket connection
-                        const socket = activeSockets.get(sanitizedNumber);
-                        if (socket) {
-                            socket.ws.close();
-                            activeSockets.delete(sanitizedNumber);
-                            socketCreationTime.delete(sanitizedNumber);
-                        }
-                        
-                        // Delete session files
-                        const sessionPath = path.join(SESSION_BASE_PATH, `session_${sanitizedNumber}`);
-                        if (fs.existsSync(sessionPath)) {
-                            fs.removeSync(sessionPath);
-                        }
-                        
-                        // Delete from GitHub if octokit is available
-                        if (octokit) {
-                            await deleteSessionFromGitHub(sanitizedNumber);
-                        }
-                        
-                        // Remove from numbers list
-                        let numbers = [];
-                        if (fs.existsSync(NUMBER_LIST_PATH)) {
-                            numbers = JSON.parse(fs.readFileSync(NUMBER_LIST_PATH, 'utf8'));
-                        }
-                        const index = numbers.indexOf(sanitizedNumber);
-                        if (index !== -1) {
-                            numbers.splice(index, 1);
-                            fs.writeFileSync(NUMBER_LIST_PATH, JSON.stringify(numbers, null, 2));
-                        }
-                        
-                        await socket.sendMessage(sender, {
-                            text: '✅ Your session has been successfully deleted!\n\n> © *ᴛʜɪꜱ ʙᴏᴛ ᴩᴏᴡᴇʀᴇᴅ ʙy ᴍᴀɴᴀᴏꜰᴄ*'
-                        });
-                    } catch (error) {
-                        console.error('Failed to delete session:', error);
-                        await socket.sendMessage(sender, {
-                            text: '❌ Failed to delete your session. Please try again later.\n\n> © *ᴛʜɪꜱ ʙᴏᴛ ᴩᴏᴡᴇʀᴇᴅ ʙy ᴍᴀɴᴀᴏꜰᴄ*'
-                        });
-                    }
-                    break;
-                }
-                
-                
-
-                default: {
-                    await socket.sendMessage(sender, {
-                        text: `❌ Unknown command: ${command}\nUse ${prefix}menu to see available commands.\n\n> © *ᴛʜɪꜱ ʙᴏᴛ ᴩᴏᴡᴇʀᴇᴅ ʙy ᴍᴀɴᴀᴏꜰᴄ*`
-                    });
-                    break;
+                    );
+                } catch (err) {
+                    console.error(err);
+                    data.reply("❌ Command error occurred.");
                 }
             }
-        } catch (error) {
-            console.error('Command handler error:', error);
-            await socket.sendMessage(sender, {
-                text: `❌ An error occurred while processing your command. Please try again.\n\n> © *ᴛʜɪꜱ ʙᴏᴛ ᴩᴏᴡᴇʀᴇᴅ ʙy ᴍᴀɴᴀᴏꜰᴄ*`
-            });
         }
     });
 }
+
 
 // Memory optimization: Throttle message handlers
 function setupMessageHandlers(socket, userConfig) {
@@ -1167,6 +438,245 @@ function setupMessageHandlers(socket, userConfig) {
         }
     });
 }
+// ================= FULL SONG DOWNLOADER (REPLY BASED) =================
+
+// ---------- REQUIREMENTS ----------
+const axios = require("axios");
+const cheerio = require("cheerio");
+const yts = require("yt-search");
+
+// ================= ytmp3 FUNCTION =================
+async function ytmp3(link, format = "mp3") {
+  try {
+    // Access main page
+    await axios.get("https://v6.www-y2mate.com", {
+      headers: {
+        "User-Agent":
+          "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/127 Safari/537.36",
+      },
+    });
+
+    // Create download task
+    const createUrl = `https://loader.to/ajax/download.php?button=1&format=${format}&url=${encodeURIComponent(
+      link
+    )}`;
+
+    const createRes = await axios.get(createUrl, {
+      headers: {
+        "User-Agent":
+          "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/127 Safari/537.36",
+        Referer: "https://v6.www-y2mate.com/",
+      },
+    });
+
+    if (!createRes.data?.success || !createRes.data?.id)
+      throw new Error("Failed to create download task");
+
+    const taskId = createRes.data.id;
+    let downloadUrl = null;
+    let title = "";
+    let thumbnail = "";
+
+    // Poll status
+    while (!downloadUrl) {
+      await new Promise((r) => setTimeout(r, 3000));
+
+      const statusRes = await axios.get(
+        `https://loader.to/ajax/progress.php?id=${taskId}`,
+        {
+          headers: {
+            "User-Agent":
+              "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/127 Safari/537.36",
+            Referer: "https://v6.www-y2mate.com/",
+          },
+        }
+      );
+
+      if (statusRes.data?.download_url) {
+        downloadUrl = statusRes.data.download_url;
+        title = statusRes.data.title || "";
+        thumbnail = statusRes.data.thumbnail || "";
+      } else if (statusRes.data?.error) {
+        throw new Error(statusRes.data.error);
+      }
+    }
+
+    return {
+      title,
+      thumbnail,
+      format,
+      Created_by: "manaofc",
+      downloadUrl,
+    };
+  } catch (err) {
+    console.error("ytmp3 error:", err.message);
+    return null;
+  }
+}
+
+// ================= UTILITIES =================
+function extractYouTubeId(url) {
+  const regex =
+    /(?:https?:\/\/)?(?:www\.)?(?:youtube\.com\/(?:watch\?v=|embed\/|v\/|shorts\/)|youtu\.be\/)([a-zA-Z0-9_-]{11})/;
+  const match = url?.match(regex);
+  return match ? match[1] : null;
+}
+
+function convertYouTubeLink(q) {
+  const id = extractYouTubeId(q);
+  return id ? `https://www.youtube.com/watch?v=${id}` : q;
+}
+
+// ================= SESSION STORE =================
+const songSessions = new Map();
+
+// ================= SONG COMMAND =================
+cmd({
+  pattern: "song",
+  alias: ["play", "mp3"],
+  desc: "Download songs from YouTube",
+  category: "download",
+  filename: __filename,
+}, async (socket, mek, m, { from, reply, q, senderNumber }) => {
+  try {
+    if (!q) return reply("❌ Please provide song name or YouTube link.");
+
+    q = convertYouTubeLink(q);
+    const search = await yts(q);
+    if (!search.videos?.length)
+      return reply("❌ No results found!");
+
+    const data = search.videos[0];
+
+    songSessions.set(senderNumber, {
+      url: data.url,
+      title: data.title,
+    });
+
+    const caption = `🎧 *SONG DOWNLOADER*
+
+🎵 *Title:* ${data.title}
+⏱️ *Duration:* ${data.timestamp}
+👁️ *Views:* ${data.views}
+📅 *Uploaded:* ${data.ago}
+
+Reply with number 👇
+1️⃣ Audio
+2️⃣ Document
+3️⃣ Voice Note
+0️⃣ Cancel
+`;
+
+    await socket.sendMessage(
+      from,
+      { image: { url: data.thumbnail }, caption },
+      { quoted: mek }
+    );
+  } catch (err) {
+    console.error(err);
+    reply("❌ Song command failed.");
+  }
+});
+
+// ================= REPLY HANDLER =================
+let songReplyHandlerAdded = false;
+
+function addSongReplyHandler(socket) {
+  if (songReplyHandlerAdded) return;
+  songReplyHandlerAdded = true;
+
+  socket.ev.on("messages.upsert", async ({ messages }) => {
+    try {
+      const msg = messages[0];
+      if (!msg?.message) return;
+
+      const text =
+        msg.message.conversation ||
+        msg.message.extendedTextMessage?.text;
+      if (!text) return;
+
+      const from = msg.key.remoteJid;
+      const sender = msg.key.participant || from;
+      const senderNumber = sender.split("@")[0];
+
+      if (!songSessions.has(senderNumber)) return;
+
+      const choice = text.trim();
+      const session = songSessions.get(senderNumber);
+
+      if (choice === "0") {
+        songSessions.delete(senderNumber);
+        return socket.sendMessage(
+          from,
+          { text: "❌ Song download cancelled." },
+          { quoted: msg }
+        );
+      }
+
+      if (!["1", "2", "3"].includes(choice)) return;
+
+      await socket.sendMessage(from, {
+        react: { text: "⬇️", key: msg.key },
+      });
+
+      const result = await ytmp3(session.url, "mp3");
+      if (!result?.downloadUrl) {
+        songSessions.delete(senderNumber);
+        return socket.sendMessage(
+          from,
+          { text: "❌ Download failed." },
+          { quoted: msg }
+        );
+      }
+
+      const link = result.downloadUrl;
+
+      if (choice === "1") {
+        await socket.sendMessage(
+          from,
+          { audio: { url: link }, mimetype: "audio/mpeg" },
+          { quoted: msg }
+        );
+      }
+
+      if (choice === "2") {
+        await socket.sendMessage(
+          from,
+          {
+            document: { url: link },
+            mimetype: "audio/mp3",
+            fileName: `${session.title}.mp3`,
+          },
+          { quoted: msg }
+        );
+      }
+
+      if (choice === "3") {
+        await socket.sendMessage(
+          from,
+          {
+            audio: { url: link },
+            mimetype: "audio/mpeg",
+            ptt: true,
+          },
+          { quoted: msg }
+        );
+      }
+
+      await socket.sendMessage(from, {
+        react: { text: "✅", key: msg.key },
+      });
+
+      songSessions.delete(senderNumber);
+    } catch (err) {
+      console.error("Song reply handler error:", err);
+    }
+  });
+}
+
+// 🔥 CALL ONCE AFTER SOCKET READY
+addSongReplyHandler(socket);
+
 
 // Memory optimization: Batch GitHub operations
 async function deleteSessionFromGitHub(number) {
