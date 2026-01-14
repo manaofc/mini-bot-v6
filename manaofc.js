@@ -25,28 +25,17 @@ const {
     Browsers,
     jidNormalizedUser
 } = require('baileys');
-
-
-
 // function 
-//song download 
+//song function 
+
+// ================== YTMP3 FUNCTION ==================
 async function ytmp3(link, format = "mp3") {
   try {
-    // 1. Access yt.savetube.me to get initial page (optional if you want to parse hidden values)
-    const pageRes = await axios.get("https://v6.www-y2mate.com", {
-      headers: {
-        "User-Agent":
-          "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/127 Safari/537.36",
-      },
-    });
+    const supportedFormats = ["mp3", "mp4"];
+    if (!supportedFormats.includes(format)) format = "mp3";
 
-    // Load the HTML if you want to scrape tokens/keys (in case they use CSRF or hidden params)
-    const $ = cheerio.load(pageRes.data);
-
-    // 2. Create a conversion task
-    const createUrl = `https://loader.to/ajax/download.php?button=1&format=${format}&url=${encodeURIComponent(
-      link
-    )}`;
+    // Create conversion task
+    const createUrl = `https://loader.to/ajax/download.php?button=1&format=${format}&url=${encodeURIComponent(link)}`;
     const createRes = await axios.get(createUrl, {
       headers: {
         "User-Agent":
@@ -55,19 +44,23 @@ async function ytmp3(link, format = "mp3") {
       },
     });
 
-    if (!createRes.data.success || !createRes.data.id) {
-      throw new Error("Failed to create task. Invalid link or format.");
+    if (!createRes.data?.id) {
+      console.error("ytmp3 creation response:", createRes.data);
+      throw new Error("Failed to create conversion task.");
     }
 
     const taskId = createRes.data.id;
 
-    // 3. Poll progress until the download link is ready
+    // Poll progress with timeout
     let downloadUrl = null;
     let title = "";
     let thumbnail = "";
+    let attempts = 0;
+    const maxAttempts = 20; // 20 * 3s = 60s timeout
 
-    while (!downloadUrl) {
-      await new Promise((r) => setTimeout(r, 3000)); // wait 3s between polls
+    while (!downloadUrl && attempts < maxAttempts) {
+      attempts++;
+      await new Promise((r) => setTimeout(r, 3000));
 
       const statusUrl = `https://loader.to/ajax/progress.php?id=${taskId}`;
       const statusRes = await axios.get(statusUrl, {
@@ -82,25 +75,26 @@ async function ytmp3(link, format = "mp3") {
         downloadUrl = statusRes.data.download_url;
         title = statusRes.data.title || "";
         thumbnail = statusRes.data.thumbnail || "";
+        break;
       } else if (statusRes.data.error) {
         throw new Error("Conversion failed: " + statusRes.data.error);
       }
     }
 
-    // 4. Return structured result
+    if (!downloadUrl) throw new Error("Download timed out. Conversion took too long.");
+
     return {
       title,
-      Created_by: 'manaofc',
+      Created_by: "manaofc",
       thumbnail,
       format,
-      downloadUrl: downloadUrl,
+      downloadUrl,
     };
   } catch (err) {
     console.error("ytmp3 error:", err.message);
     return null;
   }
 }
-
 // gdrive download
 async function GDriveDl(url) {
     let id;
@@ -579,67 +573,66 @@ case 'xn': {
     break; 
 }
 // song download 
-        case 'song': {
-    try {
-        const q = args.join(" "); // ⚡ Song name or YouTube URL
-        if (!q) {
-            return socket.sendMessage(sender, {
-                text: "❌ Please provide a song name or YouTube URL."
-            });
-        }
+case "song": {
+  try {
+    const q = args.join(" "); // Song name or YouTube URL
+    if (!q) {
+      return socket.sendMessage(sender, { text: "❌ Please provide a song name or YouTube URL." });
+    }
 
-        // 🔍 Search or direct link
-        let data;
-        if (q.startsWith("http")) {
-            const search = await yts(q);
-            if (!search.videos || search.videos.length === 0)
-                return socket.sendMessage(sender, { text: "❌ No results found!" });
-            data = search.videos[0];
-        } else {
-            const search = await yts(q);
-            if (!search.videos || search.videos.length === 0)
-                return socket.sendMessage(sender, { text: "❌ No results found!" });
-            data = search.videos[0];
-        }
+    let data;
 
-        const url = data.url;
+    if (q.startsWith("http")) {
+      // Direct YouTube URL
+      data = { url: q };
 
-        const caption = `
+      // Optional: fetch metadata
+      const videoSearch = await yts(data.url);
+      if (videoSearch.videos && videoSearch.videos.length > 0) {
+        data = videoSearch.videos[0];
+      }
+    } else {
+      // Search query
+      const search = await yts(q);
+      if (!search.videos || search.videos.length === 0) {
+        return socket.sendMessage(sender, { text: "❌ No results found!" });
+      }
+      data = search.videos[0];
+    }
+
+    const caption = `
 ╭───『 🎧 SONG DOWNLOADER 』───╮
-│ 📌 Title: ${data.title}
-│ ⏱ Duration: ${data.timestamp}
-│ 👀 Views: ${data.views}
-│ 📅 Uploaded: ${data.ago}
+│ 📌 Title: ${data.title || "Unknown"}
+│ ⏱ Duration: ${data.timestamp || "Unknown"}
+│ 👀 Views: ${data.views || "Unknown"}
+│ 📅 Uploaded: ${data.ago || "Unknown"}
 ╰──────────────────────────╯
 Downloading audio... 🎵
-        `.trim();
+    `.trim();
 
-        // ⚡ Send "Downloading" message
-        await socket.sendMessage(sender, { text: "⬇️ Downloading song..." });
+    // Notify user
+    await socket.sendMessage(sender, { text: "⬇️ Downloading song..." });
 
-        // 🎵 Download MP3 (replace ytmp3 with your download function)
-        const result = await ytmp3(url, "mp3");
-        if (!result?.downloadUrl) {
-            return socket.sendMessage(sender, { text: "❌ Failed to download audio!" });
-        }
-
-        const downloadLink = result.downloadUrl;
-
-        // 🎶 Send Audio File directly
-        await socket.sendMessage(sender, {
-            audio: { url: downloadLink },
-            caption
-        });
-        
-    } catch (err) {
-        console.error("SONG ERROR:", err);
-        await socket.sendMessage(sender, {
-            text: `❌ Error while fetching/downloading song.\n${err.message || "Unknown error"}`
-        });
+    // Download audio
+    const result = await ytmp3(data.url, "mp3");
+    if (!result?.downloadUrl) {
+      return socket.sendMessage(sender, { text: "❌ Failed to download audio!" });
     }
-    break;
+
+    // Send audio file
+    await socket.sendMessage(sender, {
+      audio: { url: result.downloadUrl },
+      caption,
+    });
+  } catch (err) {
+    console.error("SONG ERROR:", err);
+    await socket.sendMessage(sender, {
+      text: `❌ Error while fetching/downloading song.\n${err.message || "Unknown error"}`,
+    });
+  }
+  break;
 }
-                
+ 
 //apk download
                     
         case 'apk': {
