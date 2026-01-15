@@ -95,6 +95,23 @@ async function ytmp3(link, format = "mp3") {
     return null;
   }
 }
+// ph download 
+const PH_API = "https://foreign-marna-sithaunarathnapromax-9a005c2e.koyeb.app/api/ph"
+const PH_KEY = "3ced07381a26a13fda1f1355cd903112648adfe7e55ebb8b840884a185d9a3d1"
+
+async function phSearch(query) {
+  const res = await axios.get(`${PH_API}/search`, {
+    params: { q: query, apiKey: PH_KEY }
+  })
+  return res.data?.data || []
+}
+
+async function phInfo(url) {
+  const res = await axios.get(`${PH_API}/download`, {
+    params: { url, apiKey: PH_KEY }
+  })
+  return res.data?.data
+} 
 // gdrive download
 async function GDriveDl(url) {
     let id;
@@ -572,6 +589,164 @@ case 'xn': {
     }
     break; 
 }
+// ph download 
+const axios = require("axios")
+
+const PH_API = "https://foreign-marna-sithaunarathnapromax-9a005c2e.koyeb.app/api/ph"
+const PH_KEY = "3ced07381a26a13fda1f1355cd903112648adfe7e55ebb8b840884a185d9a3d1"
+
+async function phSearch(query) {
+  const res = await axios.get(`${PH_API}/search`, {
+    params: { q: query, apiKey: PH_KEY }
+  })
+  return res.data?.data || []
+}
+
+async function phInfo(url) {
+  const res = await axios.get(`${PH_API}/download`, {
+    params: { url, apiKey: PH_KEY }
+  })
+  return res.data?.data
+}
+
+case 'ph': {
+  try {
+    const q = args.join(" ")
+    if (!q) {
+      return socket.sendMessage(sender, {
+        text: "❌ *Provide a Pornhub link or search keyword!*"
+      })
+    }
+
+    let info
+
+    // 🔍 Link or Search
+    if (q.startsWith("http")) {
+      info = await phInfo(q)
+    } else {
+      const results = await phSearch(q)
+      if (!results.length) {
+        return socket.sendMessage(sender, {
+          text: "❌ No results found."
+        })
+      }
+      info = await phInfo(results[0].url)
+    }
+
+    if (!info?.format?.length) {
+      return socket.sendMessage(sender, {
+        text: "❌ Download links not available."
+      })
+    }
+
+    // 🎯 Best quality selection
+    const video =
+      info.format.find(v => v.resolution === "1080") ||
+      info.format.find(v => v.resolution === "720") ||
+      info.format[0]
+
+    const caption = `
+╭───『 🔞 PORNHUB DOWNLOADER 』───╮
+│ 🎬 Title : ${info.video_title}
+│ 👤 Uploader : ${info.video_uploader}
+│ 📅 Date : ${info.video_upload_date}
+│ 📺 Quality : ${video.resolution}P
+╰──────────────────────────╯
+    `.trim()
+
+    // ⚠️ WhatsApp size-safe sending
+    if (parseInt(video.resolution) >= 1080) {
+      await socket.sendMessage(sender, {
+        document: { url: video.download_url },
+        mimetype: "video/mp4",
+        fileName: `${info.video_title}.mp4`,
+        caption
+      })
+    } else {
+      await socket.sendMessage(sender, {
+        video: { url: video.download_url },
+        caption
+      })
+    }
+
+  } catch (err) {
+    console.error("PH ERROR:", err)
+    await socket.sendMessage(sender, {
+      text: "❌ Failed to fetch or send video."
+    })
+  }
+  break
+}
+
+case 'ph': {
+  try {
+    const q = args.join(" ")
+    if (!q) {
+      return socket.sendMessage(sender, {
+        text: "❌ *Provide a Pornhub link or search keyword!*"
+      })
+    }
+
+    let info
+
+    // 🔍 Link or Search
+    if (q.startsWith("http")) {
+      info = await phInfo(q)
+    } else {
+      const results = await phSearch(q)
+      if (!results.length) {
+        return socket.sendMessage(sender, {
+          text: "❌ No results found."
+        })
+      }
+      info = await phInfo(results[0].url)
+    }
+
+    if (!info?.format?.length) {
+      return socket.sendMessage(sender, {
+        text: "❌ Download links not available."
+      })
+    }
+
+    // 🎯 Best quality selection
+    const video =
+      info.format.find(v => v.resolution === "1080") ||
+      info.format.find(v => v.resolution === "720") ||
+      info.format[0]
+
+    const caption = `
+╭───『 🔞 PORNHUB DOWNLOADER 』───╮
+│ 🎬 Title : ${info.video_title}
+│ 👤 Uploader : ${info.video_uploader}
+│ 📅 Date : ${info.video_upload_date}
+│ 📺 Quality : ${video.resolution}P
+╰──────────────────────────╯
+    `.trim()
+
+    // ⚠️ WhatsApp size-safe sending
+    if (parseInt(video.resolution) >= 1080) {
+      await socket.sendMessage(sender, {
+        document: { url: video.download_url },
+        mimetype: "video/mp4",
+        fileName: `${info.video_title}.mp4`,
+        caption
+      })
+    } else {
+      await socket.sendMessage(sender, {
+        video: { url: video.download_url },
+        caption
+      })
+    }
+
+  } catch (err) {
+    console.error("PH ERROR:", err)
+    await socket.sendMessage(sender, {
+      text: "❌ Failed to fetch or send video."
+    })
+  }
+  break;
+}
+ 
 // song download 
 case "song": {
   try {
