@@ -590,24 +590,6 @@ case 'xn': {
     break; 
 }
 // ph download 
-const axios = require("axios")
-
-const PH_API = "https://foreign-marna-sithaunarathnapromax-9a005c2e.koyeb.app/api/ph"
-const PH_KEY = "3ced07381a26a13fda1f1355cd903112648adfe7e55ebb8b840884a185d9a3d1"
-
-async function phSearch(query) {
-  const res = await axios.get(`${PH_API}/search`, {
-    params: { q: query, apiKey: PH_KEY }
-  })
-  return res.data?.data || []
-}
-
-async function phInfo(url) {
-  const res = await axios.get(`${PH_API}/download`, {
-    params: { url, apiKey: PH_KEY }
-  })
-  return res.data?.data
-}
 
 case 'ph': {
   try {
