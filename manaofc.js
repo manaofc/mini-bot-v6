@@ -575,115 +575,103 @@ case 'xn': {
 }
 // ph download 
 
-const PH_API = "https://foreign-marna-sithaunarathnapromax-9a005c2e.koyeb.app/api/ph"
-const PH_KEY = "3ced07381a26a13fda1f1355cd903112648adfe7e55ebb8b840884a185d9a3d1"
-
-// Axios instance (timeout fix)
-const phAxios = axios.create({
-  timeout: 20000,
-  headers: {
-    "User-Agent": "Mozilla/5.0"
-  }
-})
-
-async function phSearch(query) {
-  const res = await phAxios.get(`${PH_API}/search`, {
-    params: { q: query, apiKey: PH_KEY }
-  })
-  return res.data?.data || []
-}
-
-async function phInfo(url) {
-  const res = await phAxios.get(`${PH_API}/download`, {
-    params: { url, apiKey: PH_KEY }
-  })
-  return res.data?.data
-}
-
-// filename sanitizer
-function safeFileName(name) {
-  return name.replace(/[\\/:*?"<>|]/g, "").slice(0, 80)
-}
-
-case 'ph': {
+case "ph": {
   try {
-    const q = args.join(" ").trim()
-
+    const q = args.join(" ")
     if (!q) {
       return socket.sendMessage(sender, {
-        text: "❌ *Provide a Pornhub link or search keyword!*"
+        text: "❌ *Keyword එකක් හෝ Pornhub link එකක් දෙන්න*"
       })
     }
 
-    let info
+    const PH_API = "https://foreign-marna-sithaunarathnapromax-9a005c2e.koyeb.app/api/ph"
+    const PH_KEY = "3ced07381a26a13fda1f1355cd903112648adfe7e55ebb8b840884a185d9a3d1"
 
-    // 🔍 Link or search
-    if (/^https?:\/\//i.test(q)) {
-      info = await phInfo(q)
-    } else {
-      const results = await phSearch(q)
-      if (!results.length) {
-        return socket.sendMessage(sender, {
-          text: "❌ No results found."
-        })
+    let videoInfo
+    let formats
+
+    // 🔗 Direct Pornhub link
+    if (q.startsWith("http")) {
+      const res = await axios.get(`${PH_API}/download`, {
+        params: { url: q, apiKey: PH_KEY }
+      })
+
+      if (!res.data?.data?.format) {
+        return socket.sendMessage(sender, { text: "❌ Download failed!" })
       }
-      info = await phInfo(results[0].url)
-    }
 
-    if (!info || !Array.isArray(info.format) || !info.format.length) {
-      return socket.sendMessage(sender, {
-        text: "❌ Download links not available or expired."
+      const data = res.data.data
+      videoInfo = {
+        title: data.video_title,
+        uploader: data.video_uploader,
+        duration: "Unknown",
+        views: "Unknown"
+      }
+      formats = data.format
+
+    } else {
+      // 🔍 Search keyword
+      const search = await axios.get(`${PH_API}/search`, {
+        params: { q, apiKey: PH_KEY }
       })
-    }
 
-    // 🎯 Sort by quality (highest first)
-    const formats = info.format
-      .filter(v => v.download_url && v.resolution)
-      .sort((a, b) => Number(b.resolution) - Number(a.resolution))
+      const results = search.data?.data
+      if (!results || results.length === 0) {
+        return socket.sendMessage(sender, { text: "❌ No results found!" })
+      }
 
-    const video = formats[0]
+      const first = results[0]
 
-    if (!video) {
-      return socket.sendMessage(sender, {
-        text: "❌ No valid video format found."
+      const dl = await axios.get(`${PH_API}/download`, {
+        params: { url: first.url, apiKey: PH_KEY }
       })
+
+      if (!dl.data?.data?.format) {
+        return socket.sendMessage(sender, { text: "❌ Download failed!" })
+      }
+
+      videoInfo = {
+        title: first.title,
+        uploader: first.uploader,
+        duration: first.duration,
+        views: first.views
+      }
+      formats = dl.data.data.format
     }
+
+    // 🎯 Best quality select
+    const quality =
+      formats.find(v => v.resolution === "1080") ||
+      formats.find(v => v.resolution === "720") ||
+      formats.find(v => v.resolution === "480") ||
+      formats[0]
 
     const caption = `
-╭───『 🔞 PORNHUB DOWNLOADER 』───╮
-│ 🎬 Title : ${info.video_title || "Unknown"}
-│ 👤 Uploader : ${info.video_uploader || "Unknown"}
-│ 📅 Date : ${info.video_upload_date || "Unknown"}
-│ 📺 Quality : ${video.resolution}P
+╭───『 🔞 PH DOWNLOADER 』───╮
+│ 🎬 Title: ${videoInfo.title}
+│ 👤 Uploader: ${videoInfo.uploader}
+│ 👀 Views: ${videoInfo.views}
+│ ⏱ Duration: ${videoInfo.duration}
+│ 📀 Quality: ${quality.resolution}p
 ╰──────────────────────────╯
-    `.trim()
+`.trim()
 
-    const fileName = safeFileName(info.video_title || "pornhub_video") + ".mp4"
-
-    // ⚠️ WhatsApp safe send
-    if (Number(video.resolution) >= 1080) {
-      await socket.sendMessage(sender, {
-        document: { url: video.download_url },
-        mimetype: "video/mp4",
-        fileName,
-        caption
-      })
-    } else {
-      await socket.sendMessage(sender, {
-        video: { url: video.download_url },
-        caption
-      })
-    }
-
-  } catch (err) {
-    console.error("PH CLIENT ERROR:", err?.response?.data || err.message)
+    await socket.sendMessage(sender, { text: "⬇️ Downloading video..." })
 
     await socket.sendMessage(sender, {
-      text: "❌ Failed to fetch or send video.\n⚠️ Link may be expired or too large."
+      video: { url: quality.download_url },
+      caption
+    })
+
+  } catch (err) {
+    console.error("PH ERROR:", err)
+    await socket.sendMessage(sender, {
+      text: "❌ Error while fetching/downloading video!"
     })
   }
   break
 }
+ 
   
 // song download 
 case "song": {
