@@ -926,8 +926,8 @@ owner commands:
 case 'owner': {
     const vcard = 'BEGIN:VCARD\n' +
         'VERSION:3.0\n' +
-        'FN:NOVA DEVS\n' +
-        'ORG:NOVA DEVS\n' +
+        'FN:MANAOFC\n' +
+        'ORG:MANAOFC\n' +
         'TEL;type=CELL;type=VOICE;waid=94759934522:+94759934522\n' +
         'EMAIL:manishasasmith27@gmail.com\n' +
         'END:VCARD';
