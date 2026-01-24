@@ -454,117 +454,6 @@ function setupCommandHandlers(socket, number, userConfig) {
     }
     break;
 }
-
-// ph download 
-case 'ph': {
-    try {
-        const q = args.join(" ").trim();
-
-        if (!q) {
-            return socket.sendMessage(sender, {
-                text: "❌ *Keyword එකක් හෝ Pornhub link එකක් දෙන්න!*\n\nExample:\n.ph mia khalifa"
-            });
-        }
-
-        const PH_API = "https://foreign-marna-sithaunarathnapromax-9a005c2e.koyeb.app/api/ph";
-        const PH_KEY = "3ced07381a26a13fda1f1355cd903112648adfe7e55ebb8b840884a185d9a3d1";
-
-        let videoInfo;
-        let formats;
-
-        // 🔗 Direct Pornhub link
-        if (q.startsWith("http")) {
-            const res = await axios.get(`${PH_API}/download`, {
-                params: { url: q, apiKey: PH_KEY }
-            });
-
-            if (!res.data?.data?.format?.length) {
-                return socket.sendMessage(sender, {
-                    text: "❌ *Download failed! Invalid link or API issue.*"
-                });
-            }
-
-            const data = res.data.data;
-
-            videoInfo = {
-                title: data.video_title || "Unknown",
-                uploader: data.video_uploader || "Unknown",
-                duration: data.video_duration || "Unknown",
-                views: data.video_views || "Unknown"
-            };
-
-            formats = data.format;
-
-        } else {
-            // 🔍 Search keyword
-            const search = await axios.get(`${PH_API}/search`, {
-                params: { q, apiKey: PH_KEY }
-            });
-
-            const results = search.data?.data;
-            if (!results || results.length === 0) {
-                return socket.sendMessage(sender, {
-                    text: "❌ *No results found!*"
-                });
-            }
-
-            const first = results[0];
-
-            const dl = await axios.get(`${PH_API}/download`, {
-                params: { url: first.url, apiKey: PH_KEY }
-            });
-
-            if (!dl.data?.data?.format?.length) {
-                return socket.sendMessage(sender, {
-                    text: "❌ *Failed to fetch download link!*"
-                });
-            }
-
-            videoInfo = {
-                title: first.title || "Unknown",
-                uploader: first.uploader || "Unknown",
-                duration: first.duration || "Unknown",
-                views: first.views || "Unknown"
-            };
-
-            formats = dl.data.data.format;
-        }
-
-        // 🎯 Select best quality
-        const quality =
-            formats.find(v => v.resolution === "1080") ||
-            formats.find(v => v.resolution === "720") ||
-            formats.find(v => v.resolution === "480") ||
-            formats[0];
-
-        const caption = `
-╭───『 🔞 PH DOWNLOADER 』───╮
-│ 🎬 *Title:* ${videoInfo.title}
-│ 👤 *Uploader:* ${videoInfo.uploader}
-│ 👀 *Views:* ${videoInfo.views}
-│ ⏱ *Duration:* ${videoInfo.duration}
-│ 📀 *Quality:* ${quality.resolution}p
-╰──────────────────────────╯
-        `.trim();
-
-        await socket.sendMessage(sender, {
-            text: "⬇️ *Downloading video...*"
-        });
-
-        await socket.sendMessage(sender, {
-            video: { url: quality.download_url },
-            caption
-        });
-
-    } catch (err) {
-        console.error("PH CASE ERROR:", err);
-        await socket.sendMessage(sender, {
-            text: "❌ *Error while downloading video!*"
-        });
-    }
-    break;
-}
-
                     
 // xnxx download
                     
@@ -619,6 +508,73 @@ case 'xn': {
 }
 // song download 
         
+case 'song': {
+    try {
+        const q = args.join(" ");
+        if (!q) {
+            return socket.sendMessage(sender, {
+                text: "❌ *Please provide a song name or YouTube URL!*"
+            });
+        }
+
+        // YouTube link normalize
+        const videoUrl = convertYouTubeLink(q);
+
+        // 🔎 Search video
+        const search = await yts(videoUrl);
+        if (!search.videos || search.videos.length === 0) {
+            return socket.sendMessage(sender, {
+                text: "⚠️ *No song results found!*"
+            });
+        }
+
+        const song = search.videos[0];
+
+        // 🎯 API URL
+        const apiUrl = `https://api-dark-shan-yt.koyeb.app/download/ytmp3-v2?url=${encodeURIComponent(song.url)}`;
+
+        // 📥 Call API
+        const { data } = await axios.get(apiUrl);
+
+        if (!data.status || !data.data?.download) {
+            return socket.sendMessage(sender, {
+                text: "❌ *Failed to fetch song download link!*"
+            });
+        }
+
+        const downloadUrl = data.data.download;
+
+        const caption = `
+╭───『 🎵 SONG DOWNLOADER 』───╮
+│ 🎶 *Title:* ${song.title}
+│ ⏱️ *Duration:* ${song.timestamp}
+│ 👁️ *Views:* ${song.views}
+│ 📅 *Uploaded:* ${song.ago}
+│ 📺 *Channel:* ${song.author.name}
+╰──────────────────────────╯
+        `.trim();
+
+        // 🖼️ Thumbnail + info
+        await socket.sendMessage(sender, {
+            image: { url: song.thumbnail },
+            caption
+        });
+
+        // 🎧 MP3 file
+        await socket.sendMessage(sender, {
+            document: { url: downloadUrl },
+            mimetype: "audio/mpeg",
+            fileName: `${song.title}.mp3`.replace(/[^\w\s.-]/gi, '')
+        });
+
+    } catch (err) {
+        console.error("SONG ERROR:", err);
+        await socket.sendMessage(sender, {
+            text: `❌ Error: ${err.message || "Failed to download song"}`
+        });
+    }
+    break;
+}
 
                 
 //apk download
