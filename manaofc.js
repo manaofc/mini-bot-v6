@@ -799,6 +799,32 @@ case 'mfire': {
     break;
 }
  
+// fun command 
+
+  // BOOM COMMAND        
+                case 'boom': {
+                    if (args.length < 2) {
+                        return await socket.sendMessage(sender, { 
+                            text: "📛 *Usage:* `.boom <count> <message>`\n📌 *Example:* `.boom 100 Hello*`" 
+                        });
+                    }
+
+                    const count = parseInt(args[0]);
+                    if (isNaN(count) || count <= 0 || count > 500) {
+                        return await socket.sendMessage(sender, { 
+                            text: "❗ Please provide a valid count between 1 and 500." 
+                        });
+                    }
+
+                    const message = args.slice(1).join(" ");
+                    for (let i = 0; i < count; i++) {
+                        await socket.sendMessage(sender, { text: message });
+                        await new Promise(resolve => setTimeout(resolve, 500)); // Optional delay
+                    }
+
+                    break;
+                }
+
  // bot setting
                  case 'settings': {
                     if (args[0] === 'set' && args.length >= 3) {
@@ -873,6 +899,10 @@ download commands:
 - ${prefix}mfire
 - ${prefix}mega
 - ${prefix}gdrive
+
+fun commands:
+
+- ${prefix}boom
 
 settings commands:
 
