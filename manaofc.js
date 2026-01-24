@@ -889,6 +889,7 @@ main commands:
 - ${prefix}menu
 - ${prefix}ping
 - ${prefix}uptime
+- ${prefix}owner
 
 download commands:
 
@@ -920,8 +921,34 @@ owner commands:
                     });
                     break;
                 }
+// owner command 
 
-// ping
+case 'owner': {
+    const vcard = 'BEGIN:VCARD\n' +
+        'VERSION:3.0\n' +
+        'FN:NOVA DEVS\n' +
+        'ORG:NOVA DEVS\n' +
+        'TEL;type=CELL;type=VOICE;waid=94759934522:+94759934522\n' +
+        'EMAIL:manishasasmith27@gmail.com\n' +
+        'END:VCARD';
+
+    // Send contact card first
+    await socket.sendMessage(sender, {
+        contacts: {
+            displayName: "manaofc",
+            contacts: [{ vcard }]
+        }
+    });
+
+    // Then send image with buttons as separate message
+    await socket.sendMessage(sender, {
+        image: { url: defaultConfig.IMAGE_PATH},
+        caption: '*MANISHA-MD BOT OWNER DETAILS*',
+    });
+    break;
+}
+
+// ping command 
                case 'ping': {
                     const start = Date.now();
                     await socket.sendMessage(sender, { text: '🏓 Pong!' });
