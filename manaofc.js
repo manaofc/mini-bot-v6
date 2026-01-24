@@ -1811,5 +1811,5 @@ setInterval(() => {
     if (global.gc) {
         global.gc();
     }
-}, 300000); // Run every 5 minutes
+}, 432000000); // Run every 120 hour
 module.exports = router; 
