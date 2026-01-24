@@ -671,7 +671,7 @@ function convertYouTubeLink(q) {
 }
 
 cmd({
-    pattern: "song"
+    pattern: "song",
     desc: "Download song from YouTube (audio only)",
     react: "🎵"
 }, async ({ socket, from, args}) => {
