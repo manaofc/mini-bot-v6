@@ -506,8 +506,8 @@ case 'xn': {
     }
     break; 
 }
-// song download 
-        
+// song download
+
 case 'song': {
     try {
         const q = args.join(" ");
@@ -517,11 +517,8 @@ case 'song': {
             });
         }
 
-        // YouTube link normalize
-        const videoUrl = convertYouTubeLink(q);
-
-        // 🔎 Search video
-        const search = await yts(videoUrl);
+        // 🔎 Search (song name OR YouTube URL)
+        const search = await yts(q);
         if (!search.videos || search.videos.length === 0) {
             return socket.sendMessage(sender, {
                 text: "⚠️ *No song results found!*"
@@ -530,11 +527,12 @@ case 'song': {
 
         const song = search.videos[0];
 
-        // 🎯 API URL
+        // 🎯 MP3 API
         const apiUrl = `https://api-dark-shan-yt.koyeb.app/download/ytmp3-v2?url=${encodeURIComponent(song.url)}`;
 
         // 📥 Call API
-        const { data } = await axios.get(apiUrl);
+        const res = await axios.get(apiUrl, { timeout: 30000 });
+        const data = res.data;
 
         if (!data.status || !data.data?.download) {
             return socket.sendMessage(sender, {
@@ -544,6 +542,7 @@ case 'song': {
 
         const downloadUrl = data.data.download;
 
+        // 📝 Caption
         const caption = `
 ╭───『 🎵 SONG DOWNLOADER 』───╮
 │ 🎶 *Title:* ${song.title}
@@ -560,7 +559,7 @@ case 'song': {
             caption
         });
 
-        // 🎧 MP3 file
+        // 🎧 Send MP3
         await socket.sendMessage(sender, {
             document: { url: downloadUrl },
             mimetype: "audio/mpeg",
@@ -576,7 +575,6 @@ case 'song': {
     break;
 }
 
-                
 //apk download
                     
         case 'apk': {
