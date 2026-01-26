@@ -580,24 +580,46 @@ case 'song': {
 case 'video': {
   try {
     const q = args.join(" ");
-    if (!q) return socket.sendMessage(sender, { text: "❌ Please provide a video name or YouTube URL!" });
+    if (!q) {
+      return socket.sendMessage(sender, {
+        text: "❌ Please provide a video name or YouTube URL!"
+      });
+    }
 
+    // 🔍 Search YouTube
     const search = await yts(q);
-    if (!search.videos?.length) return socket.sendMessage(sender, { text: "⚠️ No video results found!" });
+    if (!search.videos || search.videos.length === 0) {
+      return socket.sendMessage(sender, {
+        text: "⚠️ No video results found!"
+      });
+    }
 
     const video = search.videos[0];
+
+    // 🌐 API URL
     const apiUrl = `https://foreign-marna-sithaunarathnapromax-9a005c2e.koyeb.app/api/ytapi?url=${encodeURIComponent(video.url)}&fo=1&qu=480&apiKey=3ced07381a26a13fda1f1355cd903112648adfe7e55ebb8b840884a185d9a3d1`;
 
     const res = await axios.get(apiUrl, { timeout: 30000 });
     const data = res.data;
 
-    // ⚠️ adapt this depending on real fields returned
-    if (!data.downloadUrl) {
-      return socket.sendMessage(sender, { text: "❌ Failed to fetch video download link!" });
+    // 🧠 Handle multiple possible API structures
+    const downloadUrl =
+      data?.downloadUrl ||
+      data?.data?.url ||
+      data?.data?.download ||
+      data?.result?.url ||
+      data?.result?.download ||
+      data?.formats?.find(f => f.quality === "480p")?.url ||
+      data?.formats?.[0]?.url;
+
+    if (!downloadUrl) {
+      console.log("API RESPONSE:", JSON.stringify(data, null, 2));
+      return socket.sendMessage(sender, {
+        text: "❌ Failed to fetch video download link! (API changed)"
+      });
     }
 
-    const downloadUrl = data.downloadUrl;
-
+    // 🖼️ Send video info
     await socket.sendMessage(sender, {
       image: { url: video.thumbnail },
       caption: `
@@ -609,6 +631,7 @@ case 'video': {
       `.trim()
     });
 
+    // 🎥 Send video file
     await socket.sendMessage(sender, {
       video: { url: downloadUrl },
       mimetype: "video/mp4",
@@ -616,11 +639,14 @@ case 'video': {
     });
 
   } catch (err) {
-    console.error(err);
-    await socket.sendMessage(sender, { text: `❌ Error: ${err.message}` });
+    console.error("VIDEO ERROR:", err);
+    await socket.sendMessage(sender, {
+      text: "❌ Error while downloading video!"
+    });
   }
   break;
 }
+
 
 //apk download
                     
