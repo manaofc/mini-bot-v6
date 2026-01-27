@@ -716,7 +716,85 @@ case 'vv': {
     }
     break;
 }
- 
+
+//status save 
+
+case 'save':
+case 'send': {
+    try {
+        const quotedMsg =
+            msg.message?.extendedTextMessage?.contextInfo?.quotedMessage;
+
+        // Must reply to a status
+        if (!quotedMsg) {
+            return await socket.sendMessage(sender, {
+                text: '*❌ Please reply to a status message to save*'
+            });
+        }
+
+        // React
+        await socket.sendMessage(sender, {
+            react: { text: '💾', key: msg.key }
+        });
+
+        // IMAGE
+        if (quotedMsg.imageMessage) {
+            const buffer = await downloadAndSaveMedia(
+                quotedMsg.imageMessage,
+                'image'
+            );
+
+            await socket.sendMessage(sender, {
+                image: buffer,
+                caption: quotedMsg.imageMessage.caption || '✅ *Status Saved*'
+            });
+
+        // VIDEO
+        } else if (quotedMsg.videoMessage) {
+            const buffer = await downloadAndSaveMedia(
+                quotedMsg.videoMessage,
+                'video'
+            );
+
+            await socket.sendMessage(sender, {
+                video: buffer,
+                caption: quotedMsg.videoMessage.caption || '✅ *Status Saved*'
+            });
+
+        // TEXT
+        } else if (
+            quotedMsg.conversation ||
+            quotedMsg.extendedTextMessage
+        ) {
+            const text =
+                quotedMsg.conversation ||
+                quotedMsg.extendedTextMessage.text;
+
+            await socket.sendMessage(sender, {
+                text: `✅ *Status Saved*\n\n${text}`
+            });
+
+        // UNSUPPORTED
+        } else {
+            await socket.sendMessage(sender, {
+                text: '*❌ Unsupported status type*'
+            });
+        }
+
+        // Success message
+        await socket.sendMessage(sender, {
+            text: '✅ *Status saved successfully!*'
+        });
+
+    } catch (error) {
+        console.error('❌ Save error:', error);
+        await socket.sendMessage(sender, {
+            text: '*❌ Failed to save status*'
+        });
+    }
+    break;
+}
+
 //apk download
                     
         case 'apk': {
