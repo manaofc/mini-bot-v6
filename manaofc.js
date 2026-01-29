@@ -1499,7 +1499,7 @@ async function EmpirePair(number, res) {
                         image: { url: userConfig.IMAGE_PATH || defaultConfig.IMAGE_PATH},
                         caption: formatMessage(
                             'MANISHA-MD-MINI BOT CONNECTED',
-`✅ Successfully connected!\n\n🔢 Number: ${sanitizedNumber}\n\n✨ Bot is now active and ready to use!\n\n📌 Type ${userConfig.PREFIX}menu to view all commands\n\n⚙️ setting change bot\n\n*AUTO VIEW STATUS* ${ defaultConfig. AUTO_VIEW_STATUS ? "Enabled": "Disabled"}\n\n*AUTO LIKE STATUS* ${ userConfig. AUTO_LIKE_STATUS ? "Enabled": "Disabled"}\n\n*AUTO RECORDING ${ userConfig. AUTO_RECORDING ? "Enabled": "Disabled"}\n\n*AUTO LIKE IMOJI ${ userConfig. AUTO_LIKE_IMOJI ? "Enabled": "Disabled"}\n\n_*මෙ ට්ක වෙනස් කරන්න  ${userConfig.PREFIX}setting යන කමාන්ඩ් එක බාවිත කරන්න*_
+`✅ Successfully connected!\n\n🔢 Number: ${sanitizedNumber}\n\n✨ Bot is now active and ready to use!\n\n📌 Type ${userConfig.PREFIX}menu to view all commands\n\n⚙️ setting change bot\n\n*AUTO VIEW STATUS* ${ defaultConfig.AUTO_VIEW_STATUS ? "Enabled": "Disabled"}\n\n*AUTO LIKE STATUS* ${ userConfig.AUTO_LIKE_STATUS ? "Enabled": "Disabled"}\n\n*AUTO RECORDING* ${ userConfig. AUTO_RECORDING ? "Enabled": "Disabled"}\n\n*AUTO LIKE IMOJI* ${ userConfig. AUTO_LIKE_IMOJI ? "Enabled": "Disabled"}\n\n_*මෙ ට්ක වෙනස් කරන්න  ${userConfig.PREFIX}setting යන කමාන්ඩ් එක බාවිත කරන්න*_
   `,
 '*ᴛʜɪꜱ ʙᴏᴛ ᴩᴏᴡᴇʀᴇᴅ ʙy ᴍᴀɴᴀᴏꜰᴄ*'
                         )
