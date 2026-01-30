@@ -66,6 +66,7 @@ const defaultConfig = {
     AUTO_RECORDING: 'true',
     AUTO_LIKE_EMOJI: ['💥', '👍', '😍', '💗', '🎈', '🎉', '🥳', '😎', '🚀', '🔥'],
     PREFIX: '.',
+    MODE: 'private',
     MAX_RETRIES: 3,
     ADMIN_LIST_PATH: './admin.json',
     IMAGE_PATH: 'https://i.ibb.co/6RzcnLWR/jpg.jpg',
