@@ -577,6 +577,73 @@ case 'song': {
 
 // video download command 
 
+case 'video': {
+    try {
+        const q = args.join(" ");
+        if (!q) {
+            return socket.sendMessage(sender, {
+                text: "❌ *Please provide a YouTube URL or video name!*"
+            });
+        }
+
+        // 🔎 Search (video name OR URL)
+        const search = await yts(q);
+        if (!search.videos || search.videos.length === 0) {
+            return socket.sendMessage(sender, {
+                text: "⚠️ *No video results found!*"
+            });
+        }
+
+        const video = search.videos[0];
+
+        // 🎯 MP4 API (720p)
+        const apiUrl = `https://api-dark-shan-yt.koyeb.app/download/ytmp4?url=${encodeURIComponent(video.url)}&quality=720&apikey=1c5502363449511f`;
+
+        // 📥 Call API
+        const res = await axios.get(apiUrl, { timeout: 60000 });
+        const data = res.data;
+
+        if (!data.status || !data.data?.download) {
+            return socket.sendMessage(sender, {
+                text: "❌ *Failed to fetch video download link!*"
+            });
+        }
+
+        const downloadUrl = data.data.download;
+
+        // 📝 Caption
+        const caption = `
+╭───『 🎬 VIDEO DOWNLOADER 』───╮
+│ 🎞️ *Title:* ${video.title}
+│ ⏱️ *Duration:* ${video.timestamp}
+│ 👁️ *Views:* ${video.views}
+│ 📅 *Uploaded:* ${video.ago}
+│ 📺 *Channel:* ${video.author.name}
+│ 📽️ *Quality:* 720p
+╰──────────────────────────╯
+        `.trim();
+
+        // 🖼️ Thumbnail + info
+        await socket.sendMessage(sender, {
+            image: { url: video.thumbnail },
+            caption
+        });
+
+        // 🎥 Send MP4
+        await socket.sendMessage(sender, {
+            video: { url: downloadUrl },
+            mimetype: "video/mp4",
+            fileName: `${video.title}.mp4`.replace(/[^\w\s.-]/gi, '')
+        });
+
+    } catch (err) {
+        console.error("VIDEO ERROR:", err);
+        await socket.sendMessage(sender, {
+            text: `❌ Error: ${err.message || "Failed to download video"}`
+        });
+    }
+    break;
+}
 
 
 // viwe one photo/video 
