@@ -529,91 +529,7 @@ case 'xn': {
 }
                     
 // song download
-case 'song': {
-    try {
-        const q = args.join(" ");
-        if (!q) {
-            return socket.sendMessage(sender, { text: "❌ *Please provide a song name or YouTube URL!*" });
-        }
 
-        // 🔎 Search (song name OR YouTube URL)
-        const search = await yts(q);
-        if (!search.videos || search.videos.length === 0) {
-            return socket.sendMessage(sender, { text: "⚠️ *No song results found!*" });
-        }
-
-        const song = search.videos[0];
-
-        // 🎯 MP3 API
-        const apiUrl = `https://api-dark-shan-yt.koyeb.app/download/ytmp3-v2?url=${encodeURIComponent(song.url)}`;
-        const res = await axios.get(apiUrl, { timeout: 30000 });
-        const data = res.data;
-
-        if (!data.status || !data.data?.download) {
-            return socket.sendMessage(sender, { text: "❌ *Failed to fetch song download link!*" });
-        }
-
-        const downloadUrl = data.data.download;
-
-        // 📝 Caption
-        const caption = `
-╭───『 🎵 SONG DOWNLOADER 』───╮
-│ 🎶 *Title:* ${song.title}
-│ ⏱️ *Duration:* ${song.timestamp}
-│ 👁️ *Views:* ${song.views}
-│ 📅 *Uploaded:* ${song.ago}
-│ 📺 *Channel:* ${song.author.name}
-╰──────────────────────────╯
-        `.trim();
-
-        // 🖼️ Thumbnail + buttons
-        const buttons = [
-            { buttonId: `song_audio_${song.url}`, buttonText: { displayText: '1️⃣ Audio' }, type: 1 },
-            { buttonId: `song_doc_${song.url}`, buttonText: { displayText: '2️⃣ Document' }, type: 1 }
-        ];
-
-        await socket.sendMessage(sender, {
-            image: { url: song.thumbnail },
-            caption,
-            buttons,
-            headerType: 4
-        });
-
-    } catch (err) {
-        console.error("SONG ERROR:", err);
-        await socket.sendMessage(sender, { text: `❌ Error: ${err.message || "Failed to download song"}` });
-    }
-    break;
-}
-
-// Button handler
-if (msg.buttonId?.startsWith('song_')) {
-    const type = msg.buttonId.split('_')[1]; // audio or doc
-    const url = msg.buttonId.split('_')[2];
-
-    const search = await yts(url);
-    const song = search.videos[0];
-    const apiUrl = `https://api-dark-shan-yt.koyeb.app/download/ytmp3-v2?url=${encodeURIComponent(url)}`;
-    const res = await axios.get(apiUrl, { timeout: 30000 });
-    const downloadUrl = res.data.data.download;
-
-    if (type === 'audio') {
-        await socket.sendMessage(msg.sender, {
-            audio: { url: downloadUrl },
-            mimetype: "audio/mpeg",
-            fileName: `${song.title}.mp3`.replace(/[^\w\s.-]/gi, '')
-        });
-    } else if (type === 'doc') {
-        await socket.sendMessage(msg.sender, {
-            document: { url: downloadUrl },
-            mimetype: "audio/mpeg",
-            fileName: `${song.title}.mp3`.replace(/[^\w\s.-]/gi, '')
-        });
-    }
-}
-
-                    
-/*
 case 'song': {
     try {
         const q = args.join(" ");
@@ -680,7 +596,6 @@ case 'song': {
     }
     break;
 }
-*/
 // video download command 
 
 case 'video': {
