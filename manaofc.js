@@ -527,106 +527,8 @@ case 'xn': {
     }
     break; 
 }
+                    
 // song download
-case 'song': {
-    try {
-        const q = args.join(" ");
-        if (!q) {
-            return socket.sendMessage(sender, {
-                text: "❌ Please provide a song name or YouTube URL!",
-                footer: "Song Downloader",
-                buttons: [
-                    { buttonId: 'song_help', buttonText: { displayText: 'How to use?' }, type: 1 }
-                ],
-                headerType: 1
-            });
-        }
-
-        // 🔎 Search (song name OR YouTube URL)
-        const search = await yts(q);
-        if (!search.videos || search.videos.length === 0) {
-            return socket.sendMessage(sender, {
-                text: "⚠️ No song results found!",
-                footer: "Song Downloader",
-                buttons: [
-                    { buttonId: 'song_retry', buttonText: { displayText: 'Try again' }, type: 1 }
-                ],
-                headerType: 1
-            });
-        }
-
-        const song = search.videos[0];
-
-        // 🎯 MP3 API
-        const apiUrl = `https://api-dark-shan-yt.koyeb.app/download/ytmp3-v2?url=${encodeURIComponent(song.url)}`;
-        const res = await axios.get(apiUrl, { timeout: 30000 });
-        const data = res.data;
-
-        if (!data.status || !data.data?.download) {
-            return socket.sendMessage(sender, {
-                text: "❌ Failed to fetch song download link!",
-                footer: "Song Downloader",
-                buttons: [
-                    { buttonId: 'song_retry', buttonText: { displayText: 'Retry' }, type: 1 }
-                ],
-                headerType: 1
-            });
-        }
-
-        const downloadUrl = data.data.download;
-
-        // 📝 Caption
-        const caption = `
-╭───『 🎵 SONG DOWNLOADER 』───╮
-│ 🎶 Title: ${song.title}
-│ ⏱️ Duration: ${song.timestamp}
-│ 👁️ Views: ${song.views}
-│ 📅 Uploaded: ${song.ago}
-│ 📺 Channel: ${song.author.name}
-╰──────────────────────────╯
-        `.trim();
-
-        // 🖼️ Thumbnail + buttons
-        await socket.sendMessage(sender, {
-            image: { url: song.thumbnail },
-            caption,
-            footer: "Choose format to download",
-            buttons: [
-                { buttonId: `download_audio_${encodeURIComponent(downloadUrl)}`, buttonText: { displayText: 'Audio 🎧' }, type: 1 },
-                { buttonId: `download_doc_${encodeURIComponent(downloadUrl)}`, buttonText: { displayText: 'Document 📄' }, type: 1 }
-            ],
-            headerType: 4
-        });
-
-    } catch (err) {
-        console.error("SONG ERROR:", err);
-        await socket.sendMessage(sender, {
-            text: `❌ Error: ${err.message || "Failed to download song"}`
-        });
-    }
-    break;
-}
-
-// 📌 Button click handler (global message listener)
-if (message?.buttonId?.startsWith('download_audio_')) {
-    const url = decodeURIComponent(message.buttonId.replace('download_audio_', ''));
-    await socket.sendMessage(sender, {
-        audio: { url },
-        mimetype: "audio/mpeg",
-        fileName: `song.mp3`
-    });
-}
-
-if (message?.buttonId?.startsWith('download_doc_')) {
-    const url = decodeURIComponent(message.buttonId.replace('download_doc_', ''));
-    await socket.sendMessage(sender, {
-        document: { url },
-        mimetype: "audio/mpeg",
-        fileName: `song.mp3`
-    });
-}
-
-/*
 
 case 'song': {
     try {
@@ -694,7 +596,6 @@ case 'song': {
     }
     break;
 }
-*/
 
 // video download command 
 
