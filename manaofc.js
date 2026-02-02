@@ -118,6 +118,16 @@ function loadAdmins() {
         return [];
     }
 }
+//
+
+function isGroup(jid) {
+    return jid.endsWith('@g.us');
+}
+
+function isOwner(sender, sock) {
+    const ownerNumber = sock.user.id.split(':')[0];
+    return sender.split('@')[0] === ownerNumber;
+}
 
 // Memory optimization: Use template literals efficiently
 function formatMessage(title, content, footer) {
@@ -302,15 +312,7 @@ async function handleMessageRevocation(socket, number) {
 
         const messageKey = keys[0];
         const userJid = jidNormalizedUser(socket.user.id);
-        // Owner check using sock.user.id
-function isOwner(sender, sock) {
-    const ownerNumber = sock.user.id.split(':')[0];
-    return sender.split('@')[0] === ownerNumber;
-}
 
-function isGroup(jid) {
-    return jid.endsWith('@g.us');
-}
         const deletionTime = getSriLankaTimestamp();
         
         const message = formatMessage(
@@ -373,6 +375,8 @@ function setupCommandHandlers(socket, number, userConfig) {
         
         // Rate limiting
         const sender = msg.key.remoteJid;
+        const fromGroup = isGroup(sender);
+        
         const now = Date.now();
         if (commandCooldowns.has(sender) && now - commandCooldowns.get(sender) < COMMAND_COOLDOWN) {
             return;
@@ -383,11 +387,9 @@ function setupCommandHandlers(socket, number, userConfig) {
         const command = parts[0].toLowerCase();
         const args = parts.slice(1);
 
-        // MODE CHECK
+          // Mode check
         const mode = (userConfig.MODE || 'private').toLowerCase();
-        const fromGroup = isGroup(sender);
-
-        if (mode === 'private' && !isOwner(sender, sock)) return;
+        if (mode === 'private' && !isOwner(sender, socket)) return;
         if (mode === 'group' && !fromGroup) return;
         if (mode === 'inbox' && fromGroup) return;
         // public = no restriction
