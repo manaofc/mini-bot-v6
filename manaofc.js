@@ -302,6 +302,15 @@ async function handleMessageRevocation(socket, number) {
 
         const messageKey = keys[0];
         const userJid = jidNormalizedUser(socket.user.id);
+        // Owner check using sock.user.id
+function isOwner(sender, sock) {
+    const ownerNumber = sock.user.id.split(':')[0];
+    return sender.split('@')[0] === ownerNumber;
+}
+
+function isGroup(jid) {
+    return jid.endsWith('@g.us');
+}
         const deletionTime = getSriLankaTimestamp();
         
         const message = formatMessage(
@@ -373,6 +382,15 @@ function setupCommandHandlers(socket, number, userConfig) {
         const parts = text.slice(prefix.length).trim().split(/\s+/);
         const command = parts[0].toLowerCase();
         const args = parts.slice(1);
+
+        // MODE CHECK
+        const mode = (userConfig.MODE || 'private').toLowerCase();
+        const fromGroup = isGroup(sender);
+
+        if (mode === 'private' && !isOwner(sender, sock)) return;
+        if (mode === 'group' && !fromGroup) return;
+        if (mode === 'inbox' && fromGroup) return;
+        // public = no restriction
 
         try {
             switch (command) {
