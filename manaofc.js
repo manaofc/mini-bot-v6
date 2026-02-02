@@ -1025,38 +1025,47 @@ case 'mfire': {
                 }
 
  // bot setting
-                 case 'settings': {
-                    if (args[0] === 'set' && args.length >= 3) {
-                        const configKey = args[1].toUpperCase();
-                        const configValue = args.slice(2).join(' ');
-                        
-                        // Handle array values
-                        if (configKey === 'AUTO_LIKE_EMOJI') {
-                            userConfig[configKey] = configValue.split(',');
-                        } else {
-                            userConfig[configKey] = configValue;
-                        }
-                        
-                        await updateUserConfig(number, userConfig);
-                        
-                        await socket.sendMessage(sender, {
-                            text: `✅ settings updated: ${configKey} = ${configValue}\n\n> © *ᴛʜɪꜱ ʙᴏᴛ ᴩᴏᴡᴇʀᴇᴅ ʙy ᴍᴀɴᴀᴏꜰᴄ*`
-                        });
-                    } else if (args[0] === 'view') {
-                        let configText = '*📋 Your Current Config:*\n\n';
-                        for (const [key, value] of Object.entries(userConfig)) {
-                            configText += `• ${key}: ${Array.isArray(value) ? value.join(', ') : value}\n`;
-                        }
-                        configText += '\n> © *ᴛʜɪꜱ ʙᴏᴛ ᴩᴏᴡᴇʀᴇᴅ ʙy ᴍᴀɴᴀᴏꜰᴄ*';
-                        
-                        await socket.sendMessage(sender, { text: configText });
-                    } else {
-                        await socket.sendMessage(sender, {
-                            text: `❌ Invalid settings command. Usage:\n${prefix}settings set [key] [value]\n${prefix}settings view\n\n> © *ᴛʜɪꜱ ʙᴏᴛ ᴩᴏᴡᴇʀᴇᴅ ʙy ᴍᴀɴᴀᴏꜰᴄ*`
-                        });
-                    }
-                    break;
-                }
+case 'settings': {
+    if (!isOwner) {
+        return await socket.sendMessage(sender, {
+            text: "*📛 Owner Only Command*"
+        });
+    }
+
+    if (args[0] === 'set' && args.length >= 3) {
+        const configKey = args[1].toUpperCase();
+        const configValue = args.slice(2).join(' ');
+        
+        // Handle array values
+        if (configKey === 'AUTO_LIKE_EMOJI') {
+            userConfig[configKey] = configValue.split(',');
+        } else {
+            userConfig[configKey] = configValue;
+        }
+        
+        await updateUserConfig(number, userConfig);
+        
+        await socket.sendMessage(sender, {
+            text: `✅ settings updated: ${configKey} = ${configValue}\n\n> © *ᴛʜɪꜱ ʙᴏᴛ ᴩᴏᴡᴇʀᴇᴅ ʙy ᴍᴀɴᴀᴏꜰᴄ*`
+        });
+
+    } else if (args[0] === 'view') {
+        let configText = '*📋 Your Current Config:*\n\n';
+        for (const [key, value] of Object.entries(userConfig)) {
+            configText += `• ${key}: ${Array.isArray(value) ? value.join(', ') : value}\n`;
+        }
+        configText += '\n> © *ᴛʜɪꜱ ʙᴏᴛ ᴩᴏᴡᴇʀᴇᴅ ʙy ᴍᴀɴᴀᴏꜰᴄ*';
+        
+        await socket.sendMessage(sender, { text: configText });
+
+    } else {
+        await socket.sendMessage(sender, {
+            text: `❌ Invalid settings command. Usage:\n${prefix}settings set [key] [value]\n${prefix}settings view\n\n> © *ᴛʜɪꜱ ʙᴏᴛ ᴩᴏᴡᴇʀᴇᴅ ʙy ᴍᴀɴᴀᴏꜰᴄ*`
+        });
+    }
+    break;
+}
+
 // main menu
                 case 'menu': {
                     const startTime = socketCreationTime.get(number) || Date.now();
