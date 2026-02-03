@@ -8,7 +8,6 @@ const router = express.Router();
 const pino = require('pino');
 const { Octokit } = require('@octokit/rest');
 const moment = require('moment-timezone');
-const xv = require("xv-scraper");
 const xnxx = require("xnxx-scraper");
 const fetch = require('node-fetch');
 const cheerio = require("cheerio");
@@ -421,60 +420,7 @@ function setupCommandHandlers(socket, number, userConfig) {
                     break;           
                 }
                     
-// xvideo download 
-                    
-                case 'xv': {
-    try {
-        const q = args.join(" "); // ⚡ Make sure q is defined
-        if (!q) {
-            return socket.sendMessage(sender, {
-                text: "❌ *Please provide a video link or search keyword!*"
-            });
-        }
 
-        let info;
-
-        // 🔍 Link or Search
-        if (q.startsWith("http")) {
-            info = await xv.xInfo(q);
-        } else {
-            const results = await xv.xsearch(q);
-            if (!results || results.length === 0) {
-                return socket.sendMessage(sender, {
-                    text: "❌ No results found for your keyword."
-                });
-            }
-            info = await xv.xInfo(results[0].url);
-        }
-
-        if (!info?.dlink) {
-            return socket.sendMessage(sender, {
-                text: "❌ Failed to fetch downloadable link for this video."
-            });
-        }
-
-        const caption = `
-╭───『 🔞 𝐗𝐕𝐈𝐃𝐄𝐎 𝐃𝐎𝐖𝐍𝐋𝐎𝐀𝐃𝐄𝐑 』───╮
-│ 🎬 *Title:* ${info.title}
-│ ⏱️ *Duration:* ${info.duration}
-│ 👀 *Views:* ${info.views}
-╰──────────────────────────╯
-        `.trim();
-
-        // ⬇️ Download & Send Video
-        await socket.sendMessage(sender, {
-            video: { url: info.dlink },
-            caption
-        });
-
-    } catch (err) {
-        console.error("XV ERROR:", err);
-        await socket.sendMessage(sender, {
-            text: `❌ Error: ${err.message || "Failed to fetch/download video"}`
-        });
-    }
-    break;
-}
                     
 // xnxx download
                     
