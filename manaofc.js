@@ -459,7 +459,7 @@ case 'xn': {
         `.trim();
 
         await socket.sendMessage(sender, {
-            image: { url: info.image },
+            image: { url: info.thumbnail },
             caption }); 
         // 🎬 Send video directly
         await socket.sendMessage(sender, {
