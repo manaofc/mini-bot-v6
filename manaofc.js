@@ -8,7 +8,6 @@ const router = express.Router();
 const pino = require('pino');
 const { Octokit } = require('@octokit/rest');
 const moment = require('moment-timezone');
-const xnxx = require("xnxx-scraper");
 const fetch = require('node-fetch');
 const cheerio = require("cheerio");
 const bodyparser = require('body-parser');
