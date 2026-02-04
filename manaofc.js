@@ -15,6 +15,8 @@ const bodyparser = require('body-parser');
 const { Buffer } = require('buffer');
 const FileType = require('file-type');
 const { File } = require('megajs');
+const { PornHub } = require('pornhub.js'); 
+const pornhub = new PornHub();
 
 const {
     default: makeWASocket,
@@ -432,8 +434,7 @@ case 'pn': {
                 text: "❌ Please provide a video link or search keyword."
             });
         }
-        const { PornHub } = require('pornhub.js'); 
-        const pornhub = new PornHub();
+        
         let videoInfo;
 
         // 🔍 Link or search
