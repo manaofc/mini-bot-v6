@@ -9,7 +9,7 @@
   },
   "dependencies": {
     "baileys": "github:manaofc/manaofc-baileys",
-    "pornhub.js ":"1.14.1",
+    "pornhub.js" :"1.14.1",
     "express": "^4.18.2",
     "fs-extra": "^11.2.0",
     "pino": "^8.17.0",
