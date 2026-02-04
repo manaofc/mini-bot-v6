@@ -458,11 +458,14 @@ case 'xn': {
 ╰──────────────────────────╯
         `.trim();
 
-        
+        await socket.sendMessage(sender, {
+            image: { url: info.image },
+            caption }); 
         // 🎬 Send video directly
         await socket.sendMessage(sender, {
             video: { url: info.dlink },
-            caption }); 
+            caption: info.title });
+
         
 
     } catch (err) {
