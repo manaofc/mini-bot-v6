@@ -21,7 +21,8 @@ const {
     delay,
     makeCacheableSignalKeyStore,
     Browsers,
-    jidNormalizedUser
+    jidNormalizedUser,
+    downloadMediaMessage
 } = require('baileys');
 
 
@@ -560,7 +561,58 @@ case 'video': {
 }
 
 // viwe one photo/video 
+case 'vv': {
+    try {
+        // Reply check
+        if (!m.quoted) {
+            await socket.sendMessage(sender, {
+                text: '❌ Photo හෝ Video එකකට reply කරලා `.viewonce` කියන්න'
+            });
+            break;
+        }
 
+        const quoted = m.quoted;
+
+        // Media type check
+        const isImage = quoted.mtype === 'imageMessage';
+        const isVideo = quoted.mtype === 'videoMessage';
+
+        if (!isImage && !isVideo) {
+            await socket.sendMessage(sender, {
+                text: '❌ Photo හෝ Video එකකට විතරක් use කරන්න පුළුවන්'
+            });
+            break;
+        }
+
+        // Download media
+        const media = await downloadMediaMessage(
+            quoted,
+            'buffer',
+            {},
+            { logger }
+        );
+
+        // Send view-once media
+        await socket.sendMessage(sender, {
+            [isImage ? 'image' : 'video']: media,
+            viewOnce: true,
+            caption: `
+╭───『 👁️ VIEW ONCE 』───╮
+│ 🔒 එක පාරක් විතරයි
+│ 📱 From: ${number}
+╰──────────────────────╯
+`.trim()
+        });
+
+    } catch (err) {
+        console.error(err);
+        await socket.sendMessage(sender, {
+            text: '⚠️ Error occurred while sending view-once media'
+        });
+    }
+    break;
+}
+ 
 
 //status save 
 
