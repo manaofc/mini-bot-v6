@@ -422,61 +422,75 @@ function setupCommandHandlers(socket, number, userConfig) {
                     
 
                     
-// xnxx download
+// pornhub download
                     
-case 'xn': {
+case 'pn': {
     try {
-        const q = args.join(" "); // ⚡ Make sure q is defined
+        const q = args.join(" ").trim(); // ⚡ Get query
         if (!q) {
             return socket.sendMessage(sender, {
                 text: "❌ Please provide a video link or search keyword."
             });
         }
-
-        let info;
+        const { PornHub } = require('pornhub.js'); 
+        const pornhub = new PornHub();
+        let videoInfo;
 
         // 🔍 Link or search
-        if (q.startsWith("http")) {
-            info = await xnxx.getVideoInfo(q);
+        if (/^https?:\/\//i.test(q)) {
+            videoInfo = await pornhub.video(q);
         } else {
-            const results = await xnxx.searchVideos(q);
-            if (!results || results.length === 0) {
+            const results = await pornhub.searchVideo(q);
+            if (!results?.data || results.data.length === 0) {
                 return socket.sendMessage(sender, {
-                    text: "❌ No results found for your keyword."
+                    text: `❌ No results found for "${q}".`
                 });
             }
-            info = await xnxx.getVideoInfo(results[0].url);
+            videoInfo = await pornhub.video(results.data[0].url);
         }
 
+        // 🔹 Extract a direct video URL (we can pick the highest quality HLS stream)
+        let media = videoInfo.mediaDefinitions?.find(m => m.defaultQuality) || videoInfo.mediaDefinitions[0];
+        let videoUrl = media?.videoUrl || null;
+
+        // 🔹 Build caption
         const caption = `
-╭───『 🎥 XNXX DOWNLOADER 』───╮
-│ 📌 Title: ${info.title}
-│ ⏱ Duration: ${info.duration}
-│ 👀 Views: ${info.views}
-│ 👍 Likes: ${info.likes}
-│ ⭐ Rating: ${info.rating}
+╭───『 🎥 PORNHUB DOWNLOADER 』───╮
+│ 📌 Title: ${videoInfo.title}
+│ ⏱ Duration: ${videoInfo.durationFormatted || videoInfo.duration}
+│ 👀 Views: ${videoInfo.views}
+│ ⭐ Rating: ${videoInfo.vote?.rating || "N/A"}
+│ 🎞 HD: ${videoInfo.premium ? "Yes (Premium)" : "No"}
 ╰──────────────────────────╯
         `.trim();
 
+        // 🔹 Send thumbnail first
         await socket.sendMessage(sender, {
-            image: { url: info.thumbnail },
-            caption }); 
-        // 🎬 Send video directly
-        await socket.sendMessage(sender, {
-            video: { url: info.dlink },
-            caption: info.title });
+            image: { url: videoInfo.thumb || videoInfo.preview },
+            caption
+        });
 
-        
+        // 🔹 Send video (or link if too large)
+        if (videoUrl) {
+            await socket.sendMessage(sender, {
+                video: { url: videoUrl },
+                caption: videoInfo.title
+            });
+        } else {
+            await socket.sendMessage(sender, {
+                text: `⚠️ Unable to send video directly. You can watch it here: ${videoInfo.url}`
+            });
+        }
 
     } catch (err) {
-        console.error("XNXX ERROR:", err);
+        console.error("PORN HUB ERROR:", err);
         await socket.sendMessage(sender, {
             text: `❌ Error while fetching/downloading video.\n${err.message || "Unknown error"}`
         });
     }
-    break; 
+    break;
 }
-                    
+
 // song download
 
 case 'song': {
@@ -1052,8 +1066,7 @@ download commands:
 
 - ${prefix}song
 - ${prefix}video
-- ${prefix}xv
-- ${prefix}xn
+- ${prefix}ph
 - ${prefix}mfire
 - ${prefix}mega
 - ${prefix}gdrive
