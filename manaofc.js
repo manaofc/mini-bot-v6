@@ -3,7 +3,6 @@ const yts = require('yt-search');
 const express = require('express');
 const fs = require('fs-extra');
 const path = require('path');
-const { writeFileSync } = require('fs');
 const { exec } = require('child_process');
 const router = express.Router();
 const pino = require('pino');
@@ -25,47 +24,6 @@ const {
     jidNormalizedUser,
     downloadMediaMessage
 } = require('baileys');
-
-
-/**
- * Download media from a quoted message
- * @param {Object} quoted - The quoted message object (m.quoted)
- * @param {String} filename - Optional: path to save the file
- * @returns {Buffer} - Media buffer
- */
-async function downloadMediaMessage(quoted, filename) {
-    try {
-        // Determine the message type
-        let messageType;
-        if (quoted.mtype === 'imageMessage') messageType = 'image';
-        else if (quoted.mtype === 'videoMessage') messageType = 'video';
-        else if (quoted.mtype === 'audioMessage') messageType = 'audio';
-        else if (quoted.mtype === 'stickerMessage') messageType = 'sticker';
-        else if (quoted.viewOnceMessage) {
-            const inner = quoted.viewOnceMessage.message;
-            if (inner.imageMessage) messageType = 'image';
-            else if (inner.videoMessage) messageType = 'video';
-        } else throw new Error('Unsupported media type');
-
-        // Download media stream
-        const stream = await downloadContentFromMessage(quoted, messageType);
-        let buffer = Buffer.from([]);
-        for await (const chunk of stream) {
-            buffer = Buffer.concat([buffer, chunk]);
-        }
-
-        // Save to file if filename is provided
-        if (filename) {
-            writeFileSync(path.resolve(filename), buffer);
-        }
-
-        return buffer;
-
-    } catch (err) {
-        console.error('MEDIA DOWNLOAD ERROR:', err);
-        throw err;
-    }
-}
 
 
 // function 
@@ -602,64 +560,6 @@ case 'video': {
 }
 
 // viwe one photo/video 
-case 'vv': {
-    try {
-        // Reply check
-        if (!m.quoted) {
-            await socket.sendMessage(sender, {
-                text: '❌ Photo හෝ Video එකකට reply කරලා `.viewonce` කියන්න'
-            });
-            break;
-        }
-
-        const quoted = m.quoted;
-
-        // Media type check
-        const isImage = quoted.mtype === 'imageMessage' || 
-                        (quoted.viewOnceMessage && quoted.viewOnceMessage.message.imageMessage);
-        const isVideo = quoted.mtype === 'videoMessage' || 
-                        (quoted.viewOnceMessage && quoted.viewOnceMessage.message.videoMessage);
-
-        if (!isImage && !isVideo) {
-            await socket.sendMessage(sender, {
-                text: '❌ Photo හෝ Video එකකට විතරක් use කරන්න පුළුවන්'
-            });
-            break;
-        }
-
-        // Download media
-        const media = await downloadMediaMessage(quoted); // buffer only
-
-        // Detect if original media is view-once
-        const isViewOnceOriginal = !!quoted.viewOnceMessage;
-
-        // Prepare message options
-        let messageOptions = {};
-        if (isImage) messageOptions.image = media;
-        else if (isVideo) messageOptions.video = media;
-
-        messageOptions.caption = `
-╭───『 👁️ VIEW ONCE 』───╮
-│ 🔒 එක පාරක් විතරයි
-│ 📱 From: ${number}
-╰──────────────────────╯
-`.trim();
-
-        // Only set viewOnce for normal media, not for original view-once
-        if (!isViewOnceOriginal) {
-            messageOptions.viewOnce = true;
-        }
-
-        // Send message
-        await socket.sendMessage(sender, messageOptions);
-
-    } catch (err) {
-        console.error('VV COMMAND ERROR:', err);
-        await socket.sendMessage(sender, {
-            text: '⚠️ Error occurred while sending media. (Original view-once media cannot be re-sent as view-once)'
-        });
-    }
-    break;
 
 //status save 
 
