@@ -12,6 +12,12 @@ const BOT_FILE = path.join(__dirname, 'manaofc.js');
 
 // ===== Download bot code from Google Drive =====
 function downloadBot(callback) {
+    if (fs.existsSync(BOT_FILE)) {
+        console.log('✅ Bot code already exists. Skipping download.');
+        callback();
+        return;
+    }
+
     const file = fs.createWriteStream(BOT_FILE);
 
     https.get(DRIVE_URL, (response) => {
@@ -44,9 +50,8 @@ app.get('/bot', (req, res) => {
 
 // ===== Start Server AFTER bot is downloaded =====
 downloadBot(() => {
-    const code = require('./manaofc'); // bot runs here
-
-    app.use('/code', code);
+    // ✅ Simply require the bot code to run it
+    require(BOT_FILE); 
 
     app.listen(PORT, () => {
         console.log(`🚀 Server running on http://localhost:${PORT}`);
