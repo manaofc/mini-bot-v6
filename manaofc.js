@@ -571,9 +571,8 @@ case 'song_doc': {
     }
     break;
 }
- 
-// video download command 
-case 'video': {
+ // yt download 
+case 'yt': {
     try {
         const q = args.join(" ");
         if (!q) {
@@ -582,7 +581,7 @@ case 'video': {
             });
         }
 
-        // 🔎 Search (video name OR URL)
+        // 🔎 Search video
         const search = await yts(q);
         if (!search.videos || search.videos.length === 0) {
             return socket.sendMessage(sender, {
@@ -592,27 +591,16 @@ case 'video': {
 
         const video = search.videos[0];
 
-        // 🎯 MP4 API (720p)
-        const apiUrl = `https://api-dark-shan-yt.koyeb.app/download/ytmp4?url=${encodeURIComponent(video.url)}&quality=720&apikey=1c5502363449511f`;
+        // 🎯 Download URLs
+        const downloadVideoUrl = `https://api-dark-shan-yt.koyeb.app/download/ytmp4?url=${encodeURIComponent(video.url)}&quality=720&apikey=1c5502363449511f`;
+        const downloadAudioUrl = `https://api-dark-shan-yt.koyeb.app/download/ytmp3-v2?url=${encodeURIComponent(video.url)}`;
 
-        // 📥 Call API
-        const res = await axios.get(apiUrl, { timeout: 60000 });
-        const data = res.data;
-
-        if (!data.status || !data.data?.download) {
-            return socket.sendMessage(sender, {
-                text: "❌ *Failed to fetch video download link!*"
-            });
-        }
-
-        const downloadUrl = data.data.download;
-
-        // 🧠 Store video per user
-        videoStore.set(sender, { video, downloadUrl });
+        // 🧠 Store both URLs per user
+        videoStore.set(sender, { video, downloadVideoUrl, downloadAudioUrl });
 
         // 📝 Caption
         const caption = `
-╭───『 🎬 VIDEO DOWNLOADER 』───╮
+╭───『 🎬 YOUTUBE DOWNLOADER 』───╮
 │ 🎞️ *Title:* ${video.title}
 │ ⏱️ *Duration:* ${video.timestamp}
 │ 👁️ *Views:* ${video.views}
@@ -622,15 +610,16 @@ case 'video': {
 ╰──────────────────────────╯
         `.trim();
 
+        // Buttons for audio & video download
         const buttons = [
             {
-                buttonId: `${prefix}video_file`,
-                buttonText: { displayText: '📽️ VIDEO DOWNLOAD' },
+                buttonId: `${prefix}download type=audio`,
+                buttonText: { displayText: '🎵 AUDIO DOWNLOAD' },
                 type: 1
             },
             {
-                buttonId: `${prefix}video_doc`,
-                buttonText: { displayText: '📄 DOCUMENT DOWNLOAD' },
+                buttonId: `${prefix}download type=video`,
+                buttonText: { displayText: '📽️ VIDEO DOWNLOAD' },
                 type: 1
             }
         ];
@@ -643,15 +632,15 @@ case 'video': {
         });
 
     } catch (err) {
-        console.error("VIDEO ERROR:", err);
+        console.error("YT ERROR:", err);
         await socket.sendMessage(sender, {
-            text: `❌ Error: ${err.message || "Failed to download video"}`
+            text: `❌ Error: ${err.message || "Failed to process video"}`
         });
     }
     break;
 }
 
-case 'video_file': {
+case 'download': {
     try {
         const data = videoStore.get(sender);
         if (!data) {
@@ -660,50 +649,36 @@ case 'video_file': {
             });
         }
 
-        const { video, downloadUrl } = data;
+        const { video, downloadVideoUrl, downloadAudioUrl } = data;
 
-        // 🎥 Send MP4
-        await socket.sendMessage(sender, {
-            video: { url: downloadUrl },
-            mimetype: "video/mp4",
-            fileName: `${video.title}.mp4`.replace(/[^\w\s.-]/gi, '')
-        });
+        // Get type from button command
+        const type = args[0]?.split('=')[1] || 'video';
 
-    } catch (err) {
-        console.error("VIDEO FILE ERROR:", err);
-        await socket.sendMessage(sender, {
-            text: `❌ Error: ${err.message || "Failed to send video"}`
-        });
-    }
-    break;
-}
-
-case 'video_doc': {
-    try {
-        const data = videoStore.get(sender);
-        if (!data) {
-            return socket.sendMessage(sender, {
-                text: "⚠️ *Video data expired. Please search again!*"
+        if (type === 'audio') {
+            // 🎵 Send audio
+            await socket.sendMessage(sender, {
+                audio: { url: downloadAudioUrl },
+                mimetype: "audio/mpeg",
+                fileName: `${video.title}.mp3`.replace(/[^\w\s.-]/gi, '')
+            });
+        } else {
+            // 🎥 Send video
+            await socket.sendMessage(sender, {
+                video: { url: downloadVideoUrl },
+                mimetype: "video/mp4",
+                fileName: `${video.title}.mp4`.replace(/[^\w\s.-]/gi, '')
             });
         }
 
-        const { video, downloadUrl } = data;
-
-        // 📄 Send as Document
-        await socket.sendMessage(sender, {
-            document: { url: downloadUrl },
-            mimetype: "video/mp4",
-            fileName: `${video.title}.mp4`.replace(/[^\w\s.-]/gi, '')
-        });
-
     } catch (err) {
-        console.error("VIDEO DOC ERROR:", err);
+        console.error("DOWNLOAD ERROR:", err);
         await socket.sendMessage(sender, {
-            text: `❌ Error: ${err.message || "Failed to send video"}`
+            text: `❌ Error: ${err.message || "Failed to send file"}`
         });
     }
     break;
 }
+
 
 // viwe one photo/video 
 
