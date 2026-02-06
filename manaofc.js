@@ -15,7 +15,7 @@ const { Buffer } = require('buffer');
 const FileType = require('file-type');
 const { File } = require('megajs');
 const songStore = new Map();
-const videostore = new Map();
+const videoStore = new Map();
 
 const {
     default: makeWASocket,
