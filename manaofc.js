@@ -573,8 +573,6 @@ case 'song_doc': {
 }
  
 // video download command 
-
-// ===================== VIDEO SEARCH =====================
 case 'video': {
     try {
         const q = args.join(" ");
@@ -584,7 +582,7 @@ case 'video': {
             });
         }
 
-        // 🔎 Search YouTube
+        // 🔎 Search (video name OR URL)
         const search = await yts(q);
         if (!search.videos || search.videos.length === 0) {
             return socket.sendMessage(sender, {
@@ -594,6 +592,24 @@ case 'video': {
 
         const video = search.videos[0];
 
+        // 🎯 MP4 API (720p)
+        const apiUrl = `https://api-dark-shan-yt.koyeb.app/download/ytmp4?url=${encodeURIComponent(video.url)}&quality=720&apikey=1c5502363449511f`;
+
+        // 📥 Call API
+        const res = await axios.get(apiUrl, { timeout: 60000 });
+        const data = res.data;
+
+        if (!data.status || !data.data?.download) {
+            return socket.sendMessage(sender, {
+                text: "❌ *Failed to fetch video download link!*"
+            });
+        }
+
+        const downloadUrl = data.data.download;
+
+        // 🧠 Store video per user
+        videoStore.set(sender, { video, downloadUrl });
+
         // 📝 Caption
         const caption = `
 ╭───『 🎬 VIDEO DOWNLOADER 』───╮
@@ -602,73 +618,10 @@ case 'video': {
 │ 👁️ *Views:* ${video.views}
 │ 📅 *Uploaded:* ${video.ago}
 │ 📺 *Channel:* ${video.author.name}
+│ 📽️ *Quality:* 720p
 ╰──────────────────────────╯
         `.trim();
 
-        // 📜 Quality selection list
-        const sections = [
-            {
-                title: "Choose video quality",
-                rows: [
-                    { title: "360p", rowId: `${prefix}video_quality 360` },
-                    { title: "720p", rowId: `${prefix}video_quality 720` },
-                    { title: "1080p", rowId: `${prefix}video_quality 1080` }
-                ]
-            }
-        ];
-
-        await socket.sendMessage(sender, {
-            text: caption,
-            footer: "Select the quality you want to download",
-            title: "🎬 Video Downloader",
-            buttonText: "Choose Quality",
-            sections
-        });
-
-        // Store video info temporarily
-        videoStore.set(sender, { video });
-
-    } catch (err) {
-        console.error("VIDEO ERROR:", err);
-        await socket.sendMessage(sender, {
-            text: `❌ Error: ${err.message || "Failed to fetch video"}`
-        });
-    }
-    break;
-}
-
-// ===================== HANDLE QUALITY SELECTION =====================
-case 'video_quality': {
-    try {
-        const [_, quality] = args; // args[0] = 'video_quality', args[1] = '360'/'720'/'1080'
-        const data = videoStore.get(sender);
-
-        if (!data) {
-            return socket.sendMessage(sender, {
-                text: "⚠️ *Video data expired. Please search again!*"
-            });
-        }
-
-        const { video } = data;
-
-        // 🔗 API call
-        const apiUrl = `https://api-dark-shan-yt.koyeb.app/download/ytmp4?url=${encodeURIComponent(video.url)}&quality=${quality}&apikey=1c5502363449511f`;
-
-        const res = await axios.get(apiUrl, { timeout: 60000 });
-        const videoData = res.data;
-
-        if (!videoData.status || !videoData.data?.download) {
-            return socket.sendMessage(sender, {
-                text: "❌ *Failed to fetch video download link!*"
-            });
-        }
-
-        const downloadUrl = videoData.data.download;
-
-        // Save download link
-        videoStore.set(sender, { video, downloadUrl });
-
-        // Send buttons for video or document download
         const buttons = [
             {
                 buttonId: `${prefix}video_file`,
@@ -684,21 +637,20 @@ case 'video_quality': {
 
         await socket.sendMessage(sender, {
             image: { url: video.thumbnail },
-            caption: `✅ *Video ready! Quality: ${quality}p*`,
+            caption,
             buttons,
             headerType: 4
         });
 
     } catch (err) {
-        console.error("VIDEO QUALITY ERROR:", err);
+        console.error("VIDEO ERROR:", err);
         await socket.sendMessage(sender, {
-            text: `❌ Error: ${err.message || "Failed to fetch video"}`
+            text: `❌ Error: ${err.message || "Failed to download video"}`
         });
     }
     break;
 }
 
-// ===================== DOWNLOAD VIDEO AS VIDEO =====================
 case 'video_file': {
     try {
         const data = videoStore.get(sender);
@@ -710,6 +662,7 @@ case 'video_file': {
 
         const { video, downloadUrl } = data;
 
+        // 🎥 Send MP4
         await socket.sendMessage(sender, {
             video: { url: downloadUrl },
             mimetype: "video/mp4",
@@ -725,7 +678,6 @@ case 'video_file': {
     break;
 }
 
-// ===================== DOWNLOAD VIDEO AS DOCUMENT =====================
 case 'video_doc': {
     try {
         const data = videoStore.get(sender);
@@ -737,6 +689,7 @@ case 'video_doc': {
 
         const { video, downloadUrl } = data;
 
+        // 📄 Send as Document
         await socket.sendMessage(sender, {
             document: { url: downloadUrl },
             mimetype: "video/mp4",
