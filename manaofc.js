@@ -592,7 +592,7 @@ case 'yt': {
         const video = search.videos[0];
 
         // 🎯 Download URLs
-        const downloadVideoUrl = `https://api-dark-shan-yt.koyeb.app/download/ytmp4?url=${encodeURIComponent(video.url)}&quality=720&apikey=1c5502363449511f`;
+        const downloadVideoUrl = `https://foreign-marna-sithaunarathnapromax-9a005c2e.koyeb.app/api/ytapi?url=${encodeURIComponent(video.url)}&fo=1&qu=720&apiKey=3ced07381a26a13fda1f1355cd903112648adfe7e55ebb8b840884a185d9a3d1`;
         const downloadAudioUrl = `https://api-dark-shan-yt.koyeb.app/download/ytmp3-v2?url=${encodeURIComponent(video.url)}`;
 
         // 🧠 Store both URLs per user
@@ -606,7 +606,6 @@ case 'yt': {
 │ 👁️ *Views:* ${video.views}
 │ 📅 *Uploaded:* ${video.ago}
 │ 📺 *Channel:* ${video.author.name}
-│ 📽️ *Quality:* 720p
 ╰──────────────────────────╯
         `.trim();
 
