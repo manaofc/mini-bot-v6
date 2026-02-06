@@ -880,8 +880,8 @@ case 'settings': {
     break;
 }
 
-// main menu
-                case 'menu': {
+// menu
+                   case 'menu': {
                     const startTime = socketCreationTime.get(number) || Date.now();
                     const uptime = Math.floor((Date.now() - startTime) / 1000);
                     const hours = Math.floor(uptime / 3600);
@@ -892,6 +892,60 @@ case 'settings': {
                     const ramUsage = Math.round(process.memoryUsage().rss / 1024 / 1024);
                     const totalRam = Math.round(os.totalmem() / 1024 / 1024);
 
+                    const menuCaption = `
+👋 *Hi ${number}*
+
+╭───『 *MANISHA-MD-MINI BOT IS ACTIVETE* 』
+│ 👾 *ʙᴏᴛ*: MANISHA-MD
+│ 📞 *ᴏᴡɴᴇʀ*: ᴍᴀɴᴀᴏꜰᴄ
+│ ⏳ *ᴜᴘᴛɪᴍᴇ*: ${hours}h ${minutes}m ${seconds}s
+│ 📂 *ʀᴀᴍ*: ${ramUsage}MB / ${totalRam}MB
+│ ✏️ *ᴘʀᴇғɪx*: ${prefix}
+╰─────────────────────╯
+`;
+
+
+const buttons = [
+        {
+            buttonId: `${prefix}main_menu`,
+            buttonText: { displayText: 'MAIN MENU' },
+            type: 1
+        },
+       {
+            buttonId: `${prefix}download_menu`,
+            buttonText: { displayText: 'DOWNLOAD MENU' },
+            type: 1
+        },
+         {
+            buttonId: `${prefix}fun_menu`,
+            buttonText: { displayText: 'FUN MENU' },
+            type: 1
+        },
+        {
+            buttonId: `${prefix}settings_menu`,
+            buttonText: { displayText: 'SETTINGS MENU' },
+            type: 1
+        },
+        {
+            buttonId: `${prefix}owner_menu`,
+            buttonText: { displayText: 'OWNER MENU' },
+            type: 1
+        }
+    ];
+
+    await socket.sendMessage(sender, {
+        image: { url: defaultConfig.IMAGE_PATH },
+        caption: caption.trim(),
+        buttons: buttons,
+        headerType: 4
+    });
+
+    break;
+}
+
+ 
+                case 'main_menu': {
+                    
                     const menuCaption = `
 👋 *Hi ${number}*
 
