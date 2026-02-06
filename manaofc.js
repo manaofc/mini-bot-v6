@@ -414,7 +414,7 @@ function setupCommandHandlers(socket, number, userConfig) {
 
     const buttons = [
         {
-            buttonId: `${prefix}menu`
+            buttonId: `${prefix}menu`,
             buttonText: { displayText: '📜 MENU' },
             type: 1
         },
