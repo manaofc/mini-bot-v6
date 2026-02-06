@@ -14,6 +14,7 @@ const bodyparser = require('body-parser');
 const { Buffer } = require('buffer');
 const FileType = require('file-type');
 const { File } = require('megajs');
+const songStore = new Map();
 
 const {
     default: makeWASocket,
@@ -443,7 +444,6 @@ function setupCommandHandlers(socket, number, userConfig) {
 
 
 // song download
-
 case 'song': {
     try {
         const q = args.join(" ");
@@ -453,7 +453,7 @@ case 'song': {
             });
         }
 
-        // 🔎 Search (song name OR YouTube URL)
+        // 🔎 Search YouTube
         const search = await yts(q);
         if (!search.videos || search.videos.length === 0) {
             return socket.sendMessage(sender, {
@@ -465,8 +465,6 @@ case 'song': {
 
         // 🎯 MP3 API
         const apiUrl = `https://api-dark-shan-yt.koyeb.app/download/ytmp3-v2?url=${encodeURIComponent(song.url)}`;
-
-        // 📥 Call API
         const res = await axios.get(apiUrl, { timeout: 30000 });
         const data = res.data;
 
@@ -477,6 +475,9 @@ case 'song': {
         }
 
         const downloadUrl = data.data.download;
+
+        // 🧠 Store song per user
+        songStore.set(sender, { song, downloadUrl });
 
         // 📝 Caption
         const caption = `
@@ -489,17 +490,24 @@ case 'song': {
 ╰──────────────────────────╯
         `.trim();
 
-        // 🖼️ Thumbnail + info
+        const buttons = [
+            {
+                buttonId: `${prefix}song_audio`,
+                buttonText: { displayText: '🎧 AUDIO DOWNLOAD' },
+                type: 1
+            },
+            {
+                buttonId: `${prefix}song_doc`,
+                buttonText: { displayText: '📄 DOCUMENT DOWNLOAD' },
+                type: 1
+            }
+        ];
+
         await socket.sendMessage(sender, {
             image: { url: song.thumbnail },
-            caption
-        });
-
-        // 🎧 Send MP3
-        await socket.sendMessage(sender, {
-            document: { url: downloadUrl },
-            mimetype: "audio/mpeg",
-            fileName: `${song.title}.mp3`.replace(/[^\w\s.-]/gi, '')
+            caption,
+            buttons,
+            headerType: 4
         });
 
     } catch (err) {
@@ -510,6 +518,59 @@ case 'song': {
     }
     break;
 }
+case 'song_audio': {
+    try {
+        const data = songStore.get(sender);
+        if (!data) {
+            return socket.sendMessage(sender, {
+                text: "⚠️ *Song data expired. Please search again!*"
+            });
+        }
+
+        const { song, downloadUrl } = data;
+        const fileName = `${song.title}.mp3`.replace(/[^\w\s.-]/gi, '');
+
+        await socket.sendMessage(sender, {
+            audio: { url: downloadUrl },
+            mimetype: "audio/mpeg",
+            fileName
+        });
+
+    } catch (err) {
+        console.error("SONG AUDIO ERROR:", err);
+        await socket.sendMessage(sender, {
+            text: `❌ Error: ${err.message || "Failed to send audio"}`
+        });
+    }
+    break;
+}
+case 'song_doc': {
+    try {
+        const data = songStore.get(sender);
+        if (!data) {
+            return socket.sendMessage(sender, {
+                text: "⚠️ *Song data expired. Please search again!*"
+            });
+        }
+
+        const { song, downloadUrl } = data;
+        const fileName = `${song.title}.mp3`.replace(/[^\w\s.-]/gi, '');
+
+        await socket.sendMessage(sender, {
+            document: { url: downloadUrl },
+            mimetype: "audio/mpeg",
+            fileName
+        });
+
+    } catch (err) {
+        console.error("SONG DOC ERROR:", err);
+        await socket.sendMessage(sender, {
+            text: `❌ Error: ${err.message || "Failed to send document"}`
+        });
+    }
+    break;
+}
+ 
 // video download command 
 
 case 'video': {
