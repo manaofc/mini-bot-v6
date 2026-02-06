@@ -15,7 +15,6 @@ const { Buffer } = require('buffer');
 const FileType = require('file-type');
 const { File } = require('megajs');
 const songStore = new Map();
-const videoStore = new Map();
 
 const {
     default: makeWASocket,
@@ -571,114 +570,6 @@ case 'song_doc': {
     }
     break;
 }
- // yt download 
-case 'yt': {
-    try {
-        const q = args.join(" ");
-        if (!q) {
-            return socket.sendMessage(sender, {
-                text: "❌ *Please provide a YouTube URL or video name!*"
-            });
-        }
-
-        // 🔎 Search video
-        const search = await yts(q);
-        if (!search.videos || search.videos.length === 0) {
-            return socket.sendMessage(sender, {
-                text: "⚠️ *No video results found!*"
-            });
-        }
-
-        const video = search.videos[0];
-
-        // 🎯 Download URLs
-        const downloadVideoUrl = `https://foreign-marna-sithaunarathnapromax-9a005c2e.koyeb.app/api/ytapi?url=${encodeURIComponent(video.url)}&fo=1&qu=720&apiKey=3ced07381a26a13fda1f1355cd903112648adfe7e55ebb8b840884a185d9a3d1`;
-        const downloadAudioUrl = `https://api-dark-shan-yt.koyeb.app/download/ytmp3-v2?url=${encodeURIComponent(video.url)}`;
-
-        // 🧠 Store both URLs per user
-        videoStore.set(sender, { video, downloadVideoUrl, downloadAudioUrl });
-
-        // 📝 Caption
-        const caption = `
-╭───『 🎬 YOUTUBE DOWNLOADER 』───╮
-│ 🎞️ *Title:* ${video.title}
-│ ⏱️ *Duration:* ${video.timestamp}
-│ 👁️ *Views:* ${video.views}
-│ 📅 *Uploaded:* ${video.ago}
-│ 📺 *Channel:* ${video.author.name}
-╰──────────────────────────╯
-        `.trim();
-
-        // Buttons for audio & video download
-        const buttons = [
-            {
-                buttonId: `${prefix}download type=audio`,
-                buttonText: { displayText: '🎵 AUDIO DOWNLOAD' },
-                type: 1
-            },
-            {
-                buttonId: `${prefix}download type=video`,
-                buttonText: { displayText: '📽️ VIDEO DOWNLOAD' },
-                type: 1
-            }
-        ];
-
-        await socket.sendMessage(sender, {
-            image: { url: video.thumbnail },
-            caption,
-            buttons,
-            headerType: 4
-        });
-
-    } catch (err) {
-        console.error("YT ERROR:", err);
-        await socket.sendMessage(sender, {
-            text: `❌ Error: ${err.message || "Failed to process video"}`
-        });
-    }
-    break;
-}
-
-case 'download': {
-    try {
-        const data = videoStore.get(sender);
-        if (!data) {
-            return socket.sendMessage(sender, {
-                text: "⚠️ *Video data expired. Please search again!*"
-            });
-        }
-
-        const { video, downloadVideoUrl, downloadAudioUrl } = data;
-
-        // Get type from button command
-        const type = args[0]?.split('=')[1] || 'video';
-
-        if (type === 'audio') {
-            // 🎵 Send audio
-            await socket.sendMessage(sender, {
-                audio: { url: downloadAudioUrl },
-                mimetype: "audio/mpeg",
-                fileName: `${video.title}.mp3`.replace(/[^\w\s.-]/gi, '')
-            });
-        } else {
-            // 🎥 Send video
-            await socket.sendMessage(sender, {
-                video: { url: downloadVideoUrl },
-                mimetype: "video/mp4",
-                fileName: `${video.title}.mp4`.replace(/[^\w\s.-]/gi, '')
-            });
-        }
-
-    } catch (err) {
-        console.error("DOWNLOAD ERROR:", err);
-        await socket.sendMessage(sender, {
-            text: `❌ Error: ${err.message || "Failed to send file"}`
-        });
-    }
-    break;
-}
-
-
 // viwe one photo/video 
 
 //status save 
