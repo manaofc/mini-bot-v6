@@ -396,13 +396,13 @@ function setupCommandHandlers(socket, number, userConfig) {
             switch (command) {
 // main alive
                 case 'alive': {
-                    const startTime = socketCreationTime.get(number) || Date.now();
-                    const uptime = Math.floor((Date.now() - startTime) / 1000);
-                    const hours = Math.floor(uptime / 3600);
-                    const minutes = Math.floor((uptime % 3600) / 60);
-                    const seconds = Math.floor(uptime % 60);
+    const startTime = socketCreationTime.get(number) || Date.now();
+    const uptime = Math.floor((Date.now() - startTime) / 1000);
+    const hours = Math.floor(uptime / 3600);
+    const minutes = Math.floor((uptime % 3600) / 60);
+    const seconds = Math.floor(uptime % 60);
 
-                    const caption = `
+    const caption = `
 ╭───『 🤖 𝐁𝐎𝐓 𝐀𝐂𝐓𝐈𝐕𝐄 』───╮
 │ ⏰ *ᴜᴘᴛɪᴍᴇ:* ${hours}h ${minutes}m ${seconds}s
 │ 🟢 *ᴀᴄᴛɪᴠᴇ sᴇssɪᴏɴs:* ${activeSockets.size}
@@ -412,13 +412,34 @@ function setupCommandHandlers(socket, number, userConfig) {
 > © *ᴛʜɪꜱ ʙᴏᴛ ᴩᴏᴡᴇʀᴇᴅ ʙy ᴍᴀɴᴀᴏꜰᴄ*
 `;
 
-                    await socket.sendMessage(sender, {
-                        image: { url: defaultConfig.IMAGE_PATH },
-                        caption: caption.trim()
-                    });
-                    break;           
-                }
-                    
+    const buttons = [
+        {
+            buttonId: `${prefix}menu`
+            buttonText: { displayText: '📜 MENU' },
+            type: 1
+        },
+        {
+            buttonId: `${prefix}ping`,
+            buttonText: { displayText: '⚡ PING' },
+            type: 1
+        },
+        {
+            buttonId: `${prefix}uptime`,
+            buttonText: { displayText: '⏰ UPTIME' },
+            type: 1
+        }
+    ];
+
+    await socket.sendMessage(sender, {
+        image: { url: defaultConfig.IMAGE_PATH },
+        caption: caption.trim(),
+        buttons: buttons,
+        headerType: 4
+    });
+
+    break;
+}
+
 
 
 // song download
