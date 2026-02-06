@@ -947,17 +947,6 @@ const buttons = [
                 case 'main_menu': {
                     
                     const menuCaption = `
-👋 *Hi ${number}*
-
-╭───『 *MANISHA-MD-MINI BOT IS ACTIVETE* 』
-│ 👾 *ʙᴏᴛ*: MANISHA-MD
-│ 📞 *ᴏᴡɴᴇʀ*: ᴍᴀɴᴀᴏꜰᴄ
-│ ⏳ *ᴜᴘᴛɪᴍᴇ*: ${hours}h ${minutes}m ${seconds}s
-│ 📂 *ʀᴀᴍ*: ${ramUsage}MB / ${totalRam}MB
-│ ✏️ *ᴘʀᴇғɪx*: ${prefix}
-╰─────────────────────╯
-
-⚡ Commands list
 
 main commands:
 
@@ -967,6 +956,18 @@ main commands:
 - ${prefix}uptime
 - ${prefix}owner
 
+ `;
+                    await socket.sendMessage(sender, {
+                        image: { url: defaultConfig.IMAGE_PATH },
+                        caption: menuCaption.trim()
+                    });
+                    break;
+                }
+
+                    case 'download_menu': {
+                    
+                    const menuCaption = `
+
 download commands:
 
 - ${prefix}song
@@ -975,14 +976,49 @@ download commands:
 - ${prefix}mfire
 - ${prefix}mega
 - ${prefix}gdrive
+ 
+
+ `;
+                    await socket.sendMessage(sender, {
+                        image: { url: defaultConfig.IMAGE_PATH },
+                        caption: menuCaption.trim()
+                    });
+                    break;
+                }
+
+                    case 'fun_menu': {
+                    
+                    const menuCaption = `
 
 fun commands:
 
-- ${prefix}boom
+- ${prefix}boom 
+ 
+
+ `;
+                    await socket.sendMessage(sender, {
+                        image: { url: defaultConfig.IMAGE_PATH },
+                        caption: menuCaption.trim()
+                    });
+                    break;
+                }
+
+                    case 'settings_menu': {
+                    
+                    const menuCaption = `
 
 settings commands:
 
-- ${prefix}settings
+- ${prefix}settings `;
+                    await socket.sendMessage(sender, {
+                        image: { url: defaultConfig.IMAGE_PATH },
+                        caption: menuCaption.trim()
+                    });
+                    break;
+                } 
+                    case 'owner_menu': {
+                    
+                    const menuCaption = `
 
 owner commands:
 
@@ -990,13 +1026,12 @@ owner commands:
 - ${prefix}deleteme / confirm
 - ${prefix}getpp <number> - Get profile picture of any number
 `;
-
                     await socket.sendMessage(sender, {
                         image: { url: defaultConfig.IMAGE_PATH },
                         caption: menuCaption.trim()
                     });
                     break;
-                }
+                } 
 // owner command 
 
 case 'owner': {
