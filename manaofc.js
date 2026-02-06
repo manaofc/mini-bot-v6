@@ -907,37 +907,98 @@ case 'settings': {
         });
     }
 
-    if (args[0] === 'set' && args.length >= 3) {
-        const configKey = args[1].toUpperCase();
-        const configValue = args.slice(2).join(' ');
-        
-        // Handle array values
-        if (configKey === 'AUTO_LIKE_EMOJI') {
-            userConfig[configKey] = configValue.split(',');
-        } else {
-            userConfig[configKey] = configValue;
-        }
-        
-        await updateUserConfig(number, userConfig);
-        
-        await socket.sendMessage(sender, {
-            text: `✅ settings updated: ${configKey} = ${configValue}\n\n> © *ᴛʜɪꜱ ʙᴏᴛ ᴩᴏᴡᴇʀᴇᴅ ʙy ᴍᴀɴᴀᴏꜰᴄ*`
-        });
+    // =========================
+    // SETTINGS MAIN MENU
+    // =========================
+    if (!args[0]) {
+        const buttons = [
+            { buttonId: `${prefix}settings auto`, buttonText: { displayText: '⚙️ Auto Settings' }, type: 1 },
+            { buttonId: `${prefix}settings prefix`, buttonText: { displayText: '🔤 Prefix Settings' }, type: 1 },
+            { buttonId: `${prefix}settings view`, buttonText: { displayText: '📋 View Settings' }, type: 1 },
+        ];
 
-    } else if (args[0] === 'view') {
-        let configText = '*📋 Your Current Config:*\n\n';
-        for (const [key, value] of Object.entries(userConfig)) {
-            configText += `• ${key}: ${Array.isArray(value) ? value.join(', ') : value}\n`;
-        }
-        configText += '\n> © *ᴛʜɪꜱ ʙᴏᴛ ᴩᴏᴡᴇʀᴇᴅ ʙy ᴍᴀɴᴀᴏꜰᴄ*';
-        
-        await socket.sendMessage(sender, { text: configText });
-
-    } else {
-        await socket.sendMessage(sender, {
-            text: `❌ Invalid settings command. Usage:\n${prefix}settings set [key] [value]\n${prefix}settings view\n\n> © *ᴛʜɪꜱ ʙᴏᴛ ᴩᴏᴡᴇʀᴇᴅ ʙy ᴍᴀɴᴀᴏꜰᴄ*`
+        return await socket.sendMessage(sender, {
+            text: '*⚙️ Bot Settings Menu*\n\nSelect an option:',
+            buttons,
+            footer: '© ᴛʜɪꜱ ʙᴏᴛ ᴩᴏᴡᴇʀᴇᴅ ʙy ᴍᴀɴᴀᴏꜰᴄ',
+            headerType: 1
         });
     }
+
+    // =========================
+    // AUTO TRUE / FALSE BUTTONS
+    // =========================
+    if (args[0] === 'auto') {
+        const buttons = [
+            { buttonId: `${prefix}settings_set AUTO_VIEW_STATUS true`, buttonText: { displayText: '👁️ Auto View ON' }, type: 1 },
+            { buttonId: `${prefix}settings_set AUTO_VIEW_STATUS false`, buttonText: { displayText: '🚫 Auto View OFF' }, type: 1 },
+
+            { buttonId: `${prefix}settings_set AUTO_LIKE_STATUS true`, buttonText: { displayText: '❤️ Auto Like ON' }, type: 1 },
+            { buttonId: `${prefix}settings_set AUTO_LIKE_STATUS false`, buttonText: { displayText: '💔 Auto Like OFF' }, type: 1 },
+
+            { buttonId: `${prefix}settings_set AUTO_RECORDING true`, buttonText: { displayText: '🎙️ Recording ON' }, type: 1 },
+            { buttonId: `${prefix}settings_set AUTO_RECORDING false`, buttonText: { displayText: '⏹️ Recording OFF' }, type: 1 },
+        ];
+
+        return await socket.sendMessage(sender, {
+            text: '*⚙️ Auto Settings*\n\nEnable or Disable:',
+            buttons,
+            footer: '© ᴛʜɪꜱ ʙᴏᴛ ᴩᴏᴡᴇʀᴇᴅ ʙy ᴍᴀɴᴀᴏꜰᴄ',
+            headerType: 1
+        });
+    }
+
+    // =========================
+    // PREFIX BUTTONS
+    // =========================
+    if (args[0] === 'prefix') {
+        const buttons = [
+            { buttonId: `${prefix}settings_set PREFIX .`, buttonText: { displayText: '🔹 .' }, type: 1 },
+            { buttonId: `${prefix}settings_set PREFIX /`, buttonText: { displayText: '🔹 /' }, type: 1 },
+            { buttonId: `${prefix}settings_set PREFIX !`, buttonText: { displayText: '🔹 !' }, type: 1 },
+            { buttonId: `${prefix}settings_set PREFIX ?`, buttonText: { displayText: '🔹 ?' }, type: 1 },
+        ];
+
+        return await socket.sendMessage(sender, {
+            text: '*🔤 Select Bot Prefix*',
+            buttons,
+            footer: '© ᴛʜɪꜱ ʙᴏᴛ ᴩᴏᴡᴇʀᴇᴅ ʙy ᴍᴀɴᴀᴏꜰᴄ',
+            headerType: 1
+        });
+    }
+
+    // =========================
+    // VIEW SETTINGS
+    // =========================
+    if (args[0] === 'view') {
+        let text = '*📋 Current Bot Settings*\n\n';
+        for (const [key, value] of Object.entries(userConfig)) {
+            text += `• ${key}: ${value}\n`;
+        }
+
+        text += '\n© ᴛʜɪꜱ ʙᴏᴛ ᴩᴏᴡᴇʀᴇᴅ ʙy ᴍᴀɴᴀᴏꜰᴄ';
+
+        return await socket.sendMessage(sender, { text });
+    }
+
+    break;
+}
+
+case 'settings_set': {
+    if (!isOwner) return;
+
+    const key = args[0]?.toUpperCase();
+    const value = args[1];
+
+    if (!key || value === undefined) return;
+
+    userConfig[key] = value;
+    await updateUserConfig(number, userConfig);
+
+    await socket.sendMessage(sender, {
+        text: `✅ Setting Updated\n\n• ${key} = ${value}\n\n© ᴛʜɪꜱ ʙᴏᴛ ᴩᴏᴡᴇʀᴇᴅ ʙy ᴍᴀɴᴀᴏꜰᴄ`
+    });
+
     break;
 }
 
