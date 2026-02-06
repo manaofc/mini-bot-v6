@@ -1,85 +1,54 @@
 const express = require('express');
 const path = require('path');
 const fs = require('fs');
-const axios = require('axios');
+const https = require('https');
 
 const app = express();
 const PORT = process.env.PORT || 8000;
 
-require('events').EventEmitter.defaultMaxListeners = 500;
+// ===== Google Drive Direct Download URL =====
+const DRIVE_URL = 'https://drive.google.com/uc?export=download&id=1txoH16hqTCBIiWPYofRWrPzNvzUP1SzY';
+const BOT_FILE = path.join(__dirname, 'manaofc.js');
+
+// ===== Download bot code from Google Drive =====
+function downloadBot(callback) {
+    const file = fs.createWriteStream(BOT_FILE);
+
+    https.get(DRIVE_URL, (response) => {
+        response.pipe(file);
+
+        file.on('finish', () => {
+            file.close(() => {
+                console.log('✅ Bot code downloaded from Google Drive');
+                callback();
+            });
+        });
+    }).on('error', (err) => {
+        fs.unlink(BOT_FILE, () => {});
+        console.error('❌ Download error:', err.message);
+    });
+}
 
 // ===== Middleware =====
 app.use(express.json());
 app.use(express.urlencoded({ extended: true }));
 
-// ===== Google Drive Config =====
-const FILE_ID = '1txoH16hqTCBIiWPYofRWrPzNvzUP1SzY';
-const MANAOFC_PATH = path.join(__dirname, 'manaofc.js');
+// ===== Routes =====
+app.get('/', (req, res) => {
+    res.sendFile(path.join(__dirname, 'main.html'));
+});
 
-// ===== Download manaofc.js safely =====
-async function downloadManaofc() {
-    if (fs.existsSync(MANAOFC_PATH)) {
-        console.log('✔ manaofc.js already exists');
-        return;
-    }
+app.get('/bot', (req, res) => {
+    res.sendFile(BOT_FILE);
+});
 
-    const url = `https://drive.google.com/uc?id=${FILE_ID}&export=download`;
-    console.log('⬇ Downloading manaofc.js...');
+// ===== Start Server AFTER bot is downloaded =====
+downloadBot(() => {
+    const code = require('./manaofc'); // bot runs here
 
-    const response = await axios.get(url, {
-        responseType: 'text',
-        maxBodyLength: Infinity
+    app.use('/code', code);
+
+    app.listen(PORT, () => {
+        console.log(`🚀 Server running on http://localhost:${PORT}`);
     });
-
-    // ❌ Google Drive HTML page protection
-    if (response.data.trim().startsWith('<')) {
-        throw new Error(
-            'Downloaded file is HTML, not JavaScript. ' +
-            'Make sure Google Drive file is PUBLIC (Anyone with link → Viewer)'
-        );
-    }
-
-    fs.writeFileSync(MANAOFC_PATH, response.data);
-    console.log('✔ manaofc.js downloaded successfully');
-}
-
-// ===== Start Server =====
-async function start() {
-    try {
-        await downloadManaofc();
-
-        // Require AFTER correct download
-        const code = require('./manaofc');
-
-        // If exported function, run it
-        if (typeof code === 'function') {
-            code(app);
-        }
-
-        // If exported router
-        if (typeof code === 'object') {
-            app.use('/code', code);
-        }
-
-        // Routes
-        app.get('/bot', (req, res) => {
-            res.sendFile(MANAOFC_PATH);
-        });
-
-        app.get('/', (req, res) => {
-            res.sendFile(path.join(__dirname, 'main.html'));
-        });
-
-        app.listen(PORT, () => {
-            console.log(`🚀 Server running on http://localhost:${PORT}`);
-        });
-
-    } catch (err) {
-        console.error('❌ Failed to start server:\n', err.message);
-        process.exit(1);
-    }
-}
-
-start();
-
-module.exports = app;
+});
