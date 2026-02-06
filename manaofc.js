@@ -914,6 +914,7 @@ case 'settings': {
         const buttons = [
             { buttonId: `${prefix}settings auto`, buttonText: { displayText: '⚙️ Auto Settings' }, type: 1 },
             { buttonId: `${prefix}settings prefix`, buttonText: { displayText: '🔤 Prefix Settings' }, type: 1 },
+            { buttonId: `${prefix}settings mode`, buttonText: { displayText: '🧲 mode Settings' }, type: 1 },
             { buttonId: `${prefix}settings view`, buttonText: { displayText: '📋 View Settings' }, type: 1 },
         ];
 
@@ -949,7 +950,7 @@ case 'settings': {
     }
 
     // =========================
-    // PREFIX BUTTONS
+    //PREFIX BUTTONS
     // =========================
     if (args[0] === 'prefix') {
         const buttons = [
@@ -961,6 +962,25 @@ case 'settings': {
 
         return await socket.sendMessage(sender, {
             text: '*🔤 Select Bot Prefix*',
+            buttons,
+            footer: '© ᴛʜɪꜱ ʙᴏᴛ ᴩᴏᴡᴇʀᴇᴅ ʙy ᴍᴀɴᴀᴏꜰᴄ',
+            headerType: 1
+        });
+    }
+
+    // =========================
+    // MODE BUTTONS
+    // =========================
+    if (args[0] === 'mode') {
+        const buttons = [
+            { buttonId: `${prefix}settings_set MODE private`, buttonText: { displayText: 'PRAIVATE' }, type: 1 },
+            { buttonId: `${prefix}settings_set MODE inbox`, buttonText: { displayText: 'INBOX' }, type: 1 },
+            { buttonId: `${prefix}settings_set MODE group`, buttonText: { displayText: 'GROUP' }, type: 1 },
+            { buttonId: `${prefix}settings_set MODE public`, buttonText: { displayText: 'PUBLIC' }, type: 1 },
+        ];
+
+        return await socket.sendMessage(sender, {
+            text: '*🔤 Select Bot mode*',
             buttons,
             footer: '© ᴛʜɪꜱ ʙᴏᴛ ᴩᴏᴡᴇʀᴇᴅ ʙy ᴍᴀɴᴀᴏꜰᴄ',
             headerType: 1
