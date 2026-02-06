@@ -13,33 +13,34 @@ app.use(express.json());
 app.use(express.urlencoded({ extended: true }));
 
 // ===== Google Drive Config =====
-const API = '1txoH16hqTCBIiWPYofRWrPzNvzUP1SzY'; 
+const FILE_ID = '1txoH16hqTCBIiWPYofRWrPzNvzUP1SzY';
 const MANAOFC_PATH = path.join(__dirname, 'manaofc.js');
 
-// ===== Download manaofc.js if not exists =====
+// ===== Download manaofc.js safely =====
 async function downloadManaofc() {
     if (fs.existsSync(MANAOFC_PATH)) {
         console.log('✔ manaofc.js already exists');
         return;
     }
 
-    const url = `https://drive.google.com/uc?export=download&id=${API}`;
+    const url = `https://drive.google.com/uc?id=${FILE_ID}&export=download`;
     console.log('⬇ Downloading manaofc.js...');
 
-    const response = await axios({
-        url,
-        method: 'GET',
-        responseType: 'stream'
+    const response = await axios.get(url, {
+        responseType: 'text',
+        maxBodyLength: Infinity
     });
 
-    await new Promise((resolve, reject) => {
-        const stream = fs.createWriteStream(MANAOFC_PATH);
-        response.data.pipe(stream);
-        stream.on('finish', resolve);
-        stream.on('error', reject);
-    });
+    // ❌ Google Drive HTML page protection
+    if (response.data.trim().startsWith('<')) {
+        throw new Error(
+            'Downloaded file is HTML, not JavaScript. ' +
+            'Make sure Google Drive file is PUBLIC (Anyone with link → Viewer)'
+        );
+    }
 
-    console.log('✔ manaofc.js downloaded');
+    fs.writeFileSync(MANAOFC_PATH, response.data);
+    console.log('✔ manaofc.js downloaded successfully');
 }
 
 // ===== Start Server =====
@@ -47,17 +48,20 @@ async function start() {
     try {
         await downloadManaofc();
 
-        // Require AFTER download
+        // Require AFTER correct download
         const code = require('./manaofc');
 
-        // If manaofc exports a function, run it
+        // If exported function, run it
         if (typeof code === 'function') {
-            code();
+            code(app);
+        }
+
+        // If exported router
+        if (typeof code === 'object') {
+            app.use('/code', code);
         }
 
         // Routes
-        app.use('/code', code);
-
         app.get('/bot', (req, res) => {
             res.sendFile(MANAOFC_PATH);
         });
@@ -71,11 +75,11 @@ async function start() {
         });
 
     } catch (err) {
-        console.error('❌ Failed to start server:', err);
+        console.error('❌ Failed to start server:\n', err.message);
+        process.exit(1);
     }
 }
 
 start();
 
 module.exports = app;
- 
