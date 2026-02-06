@@ -935,7 +935,7 @@ const buttons = [
 
     await socket.sendMessage(sender, {
         image: { url: defaultConfig.IMAGE_PATH },
-        caption: caption.trim(),
+        caption: menuCaption.trim(),
         buttons: buttons,
         headerType: 4
     });
